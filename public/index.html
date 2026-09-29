@@ -45,7 +45,7 @@
     <h2>Jelenléti kód</h2>
     <p>Írd be a teremben kivetített 6 jegyű kódot. A kód fél percenként változik.</p>
     <form id="codeForm">
-      <input id="codeInput" class="code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="\d{6}" required>
+      <input id="codeInput" class="code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="12" required>
       <div style="height:12px"></div>
       <button type="submit" style="width:100%">Tovább</button>
     </form>
@@ -69,6 +69,7 @@
     <h2>Köszönjük! ✓</h2>
     <p>A szavazatodat rögzítettük. Az eredmény a szavazás lezárása után derül ki.</p>
     <p class="muted">A rendszerben csak az szerepel, hogy szavaztál – az nem, hogy kire.</p>
+    <div class="notice warn hidden" id="sharedHint">A rendszerből már kiléptettünk. <b>Közös gépen</b> (pl. gépteremben) jelentkezz ki a Google-fiókodból is, hogy a következő diák ne a te fiókodat lássa.</div>
   </section>
 
   <dialog id="confirmDlg">

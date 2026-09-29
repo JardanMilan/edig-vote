@@ -62,6 +62,7 @@
           <label for="elName">Megnevezés</label>
           <input id="elName" placeholder="Diáknap 2026 – próbakör" required>
           <label class="row" style="font-weight:500"><input type="checkbox" id="elTrial" style="width:auto" checked> Próbakör</label>
+          <label class="row" style="font-weight:500;margin-top:4px"><input type="checkbox" id="elNoSelf" style="width:auto"> A diák nem szavazhat a saját osztályára</label>
           <label for="elCands">Jelöltek (soronként: azonosító;megjelenő név)</label>
           <textarea id="elCands" placeholder="11.A;11.A – Vadnyugat&#10;11.B;11.B – Űrutazás&#10;11.C;11.C – Retro 80s"></textarea>
           <label>Szavazó osztályok <span class="muted">(ha egyet sem jelölsz: mindenki)</span></label>
@@ -90,9 +91,22 @@
     </div>
 
     <section class="card">
+      <h2>Ügyelet – diák keresése</h2>
+      <p class="muted">Ha egy diák nem tud szavazni: nézd meg, szerepel-e a névjegyzékben, hiányzónak van-e jelölve, és szavazott-e már. (Azt, hogy kire szavazott, a rendszer nem tudja.)</p>
+      <input id="searchInput" placeholder="Emailcím részlete, pl. kiss.anna">
+      <table id="searchTable" style="margin-top:8px"></table>
+    </section>
+
+    <section class="card">
       <h2>Admin napló</h2>
       <p class="muted">Csak admin műveletek. Szavazatokról semmi nem kerül ide.</p>
       <table id="auditTable"></table>
+    </section>
+
+    <section class="card">
+      <h2>Adatvédelem</h2>
+      <p class="muted">A diáknap után (pl. 30 nappal) töröld a személyes adatokat: névjegyzék, „ki szavazott” lista, munkamenetek. A jegyzőkönyvek (csak számok) megmaradnak.</p>
+      <button class="danger" id="purgeBtn">Személyes adatok törlése</button>
     </section>
   </div>
 </main>

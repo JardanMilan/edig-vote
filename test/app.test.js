@@ -37,23 +37,33 @@ function setup(overrides = {}) {
 
 // Egyszerű "böngésző": süti-kezeléssel.
 function client(base) {
-  let cookie = '';
-  async function req(method, path, body) {
+  const jar = new Map();
+  async function req(method, path, body, jsonHeader = body !== undefined) {
+    const cookie = [...jar].map(([k, v]) => `${k}=${v}`).join('; ');
     const res = await fetch(base + path, {
       method,
-      headers: { ...(body !== undefined && { 'Content-Type': 'application/json' }), ...(cookie && { Cookie: cookie }) },
+      headers: { ...(jsonHeader && { 'Content-Type': 'application/json' }), ...(cookie && { Cookie: cookie }) },
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
-    const set = res.headers.get('set-cookie');
-    if (set) cookie = set.split(';')[0];
+    for (const c of res.headers.getSetCookie()) {
+      const [kv] = c.split(';');
+      const i = kv.indexOf('=');
+      const k = kv.slice(0, i);
+      const v = kv.slice(i + 1);
+      if (!v || /Max-Age=0/.test(c)) jar.delete(k);
+      else jar.set(k, v);
+    }
+    const text = await res.text();
     let data = {};
-    try { data = await res.json(); } catch (_) {}
-    return { status: res.status, data };
+    try { data = JSON.parse(text); } catch (_) { data = { text }; }
+    return { status: res.status, data, text };
   }
   return {
+    jar,
     get: (p) => req('GET', p),
     post: (p, b = {}) => req('POST', p, b),
     put: (p, b = {}) => req('PUT', p, b),
+    del: (p) => req('DELETE', p, undefined, true), // mint a böngésző: fejléc, törzs nélkül
     login: (email) => req('POST', '/api/login/dev', { email }),
   };
 }
@@ -145,6 +155,11 @@ describe('szavazási folyamat', () => {
     assert.equal(r.status, 200);
     assert.deepEqual(r.data, { ok: true }, 'a válasz nem árulhatja el a választást');
 
+    // szavazás után a munkamenet megszűnik (közös gépek miatt)
+    r = await s.post('/api/vote', { candidateId: '11.A' });
+    assert.equal(r.status, 401);
+    await s.login('diak1@edig.hu');
+    assert.equal((await s.get('/api/me')).data.reason, 'already_voted');
     r = await s.post('/api/vote', { candidateId: '11.A' });
     assert.equal(r.status, 403);
     assert.equal(r.data.code, 'already_voted');
@@ -304,5 +319,109 @@ describe('anonimitás – adatbázis-szerkezet', () => {
     assert.deepEqual(voted.sort(), ['election_id', 'email'], 'a voted táblában nincs időbélyeg');
     const tally = db.prepare('PRAGMA table_info(tally)').all().map((c) => c.name);
     assert.deepEqual(tally.sort(), ['candidate_id', 'count', 'election_id']);
+  });
+});
+
+describe('v0.2: QR-beolvasás, szabályok, admin funkciók', () => {
+  let env;
+  before(async () => { env = await setup(); });
+  after(() => env.server.close());
+
+  test('QR-beolvasás: belépés előtt rögzítve, belépés után kód beírása nélkül jelen van; egyszer használható', async () => {
+    const { admin, id } = await prepareElection(env.base);
+    const s = client(env.base);
+    // a scan végpont nem árulja el, jó-e a kód
+    assert.equal((await s.post('/api/presence/scan', { code: '000000' })).status, 200);
+    await s.login('diak1@edig.hu');
+    const wrong = currentCode(env.cfg, id).code === '000000';
+    if (!wrong) assert.equal((await s.post('/api/presence', {})).data.code, 'bad_code');
+
+    assert.equal((await s.post('/api/presence/scan', { code: currentCode(env.cfg, id).code })).status, 200);
+    assert.equal((await s.get('/api/me')).data.hasScan, true);
+    assert.equal((await s.post('/api/presence', {})).status, 200);
+    assert.equal((await s.get('/api/me')).data.present, true);
+    assert.equal((await s.post('/api/presence', {})).data.code, 'bad_code', 'a beolvasás egyszer használható');
+
+    // hamisított scan süti nem jó
+    const f = client(env.base);
+    await f.login('diak2@edig.hu');
+    f.jar.set('scan', `${currentCode(env.cfg, id).code}.${Date.now()}.hamis`);
+    assert.equal((await f.post('/api/presence', {})).data.code, 'bad_code');
+    await admin.post(`/api/admin/elections/${id}/close`);
+  });
+
+  test('saját osztályra szavazás tiltható', async () => {
+    const admin = client(env.base);
+    await admin.login('admin@edig.hu');
+    const r = await admin.post('/api/admin/elections', {
+      name: 'Saját tiltva', noSelfVote: true, candidates: [{ id: '11.A', label: '11.A' }, { id: '11.B', label: '11.B' }],
+    });
+    const id = r.data.id;
+    assert.equal((await admin.post(`/api/admin/elections/${id}/open`)).status, 200);
+    const s = await studentReady(env, id, 'diak2@edig.hu'); // 11.A
+    assert.equal((await s.get('/api/me')).data.election.blockedCandidate, '11.A');
+    assert.equal((await s.post('/api/vote', { candidateId: '11.A' })).data.code, 'own_class');
+    assert.equal((await s.post('/api/vote', { candidateId: '11.B' })).status, 200);
+    await admin.post(`/api/admin/elections/${id}/close`);
+  });
+
+  test('előkészített szavazás törölhető, nyitott/lezárt nem; ismeretlen osztály elutasítva', async () => {
+    const admin = client(env.base);
+    await admin.login('admin@edig.hu');
+    let r = await admin.post('/api/admin/elections', {
+      name: 'Törlendő', candidates: [{ id: '11.A', label: 'A' }, { id: '11.B', label: 'B' }], allowedClasses: ['13.X'],
+    });
+    assert.equal(r.status, 400);
+    r = await admin.post('/api/admin/elections', { name: 'Törlendő', candidates: [{ id: '11.A', label: 'A' }, { id: '11.B', label: 'B' }] });
+    assert.equal((await admin.del(`/api/admin/elections/${r.data.id}`)).status, 200);
+    const closed = (await admin.get('/api/admin/overview')).data.elections.find((e) => e.status === 'closed');
+    assert.equal((await admin.del(`/api/admin/elections/${closed.id}`)).status, 409);
+  });
+
+  test('jegyzőkönyv JSON lenyomata egyezik; közzététel után a kivetítőn megjelenik', async () => {
+    const admin = client(env.base);
+    await admin.login('admin@edig.hu');
+    const closed = (await admin.get('/api/admin/overview')).data.elections.find((e) => e.status === 'closed');
+    const raw = await admin.get(`/api/admin/elections/${closed.id}/protocol.json`);
+    const hash = require('crypto').createHash('sha256').update(raw.text).digest('hex');
+    assert.equal(hash, closed.resultHash);
+
+    let k = await (await fetch(env.base + '/api/kiosk/code?key=kulcs')).json();
+    assert.equal(k.results, undefined, 'közzététel előtt nincs eredmény a kivetítőn');
+    await admin.post(`/api/admin/elections/${closed.id}/publish`, { published: true });
+    k = await (await fetch(env.base + '/api/kiosk/code?key=kulcs')).json();
+    assert.ok(Array.isArray(k.results.results));
+  });
+
+  test('ügyelet: keresés, hiányzás kapcsolása', async () => {
+    const admin = client(env.base);
+    await admin.login('admin@edig.hu');
+    let r = await admin.get('/api/admin/voters/search?q=diak5');
+    assert.equal(r.data.voters.length, 1);
+    assert.equal(r.data.voters[0].absent, false);
+    assert.equal((await admin.put('/api/admin/voters/absent', { email: 'diak5@edig.hu', absent: true })).status, 200);
+    r = await admin.get('/api/admin/voters/search?q=diak5');
+    assert.equal(r.data.voters[0].absent, true);
+    assert.equal((await admin.get('/api/admin/voters/search?q=%25')).data.voters.length, 0, 'LIKE-joker escape-elve');
+  });
+
+  test('0 jogosulttal nem nyitható; személyes adatok törlése, jegyzőkönyv marad', async () => {
+    const admin = client(env.base);
+    await admin.login('admin@edig.hu');
+    assert.equal((await admin.post('/api/admin/purge', { confirm: 'igen' })).status, 400);
+    const r = await admin.post('/api/admin/purge', { confirm: 'TÖRLÉS' });
+    assert.equal(r.status, 200);
+    assert.equal(env.db.prepare('SELECT COUNT(*) n FROM voters').get().n, 0);
+    assert.equal(env.db.prepare('SELECT COUNT(*) n FROM voted').get().n, 0);
+    assert.ok(env.db.prepare("SELECT COUNT(*) n FROM elections WHERE protocol IS NOT NULL").get().n >= 1);
+    assert.equal((await admin.get('/api/admin/overview')).status, 200, 'az admin bejelentkezve marad');
+
+    const e = await admin.post('/api/admin/elections', { name: 'Üres', candidates: [{ id: '11.A', label: 'A' }, { id: '11.B', label: 'B' }] });
+    assert.equal((await admin.post(`/api/admin/elections/${e.data.id}/open`)).status, 409);
+  });
+
+  test('healthz', async () => {
+    const r = await (await fetch(env.base + '/healthz')).json();
+    assert.equal(r.ok, true);
   });
 });

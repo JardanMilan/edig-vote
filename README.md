@@ -8,9 +8,9 @@ Elektronikus szavazórendszer a Dobó István Gimnázium (Eger) diáknapjára. K
 - ✅ eredmény csak lezárás után, automatikus ellenőrzéssel és nyomtatható jegyzőkönyvvel
 - ✅ próbakör: szavazásonként kijelölhető, mely osztályok vesznek részt
 
-📄 **[Részletes rendszerleírás](docs/RENDSZERLEIRAS.md)** · 🔧 **[Rendszergazdai teendők](docs/RENDSZERGAZDA.md)**
+📄 **[Részletes rendszerleírás](docs/RENDSZERLEIRAS.md)** · 🔧 **[Rendszergazdai teendők](docs/RENDSZERGAZDA.md)** · 🚀 **[Telepítés](docs/TELEPITES.md)** · 📝 **[Változások](CHANGELOG.md)**
 
-> **Állapot:** prototípus (v0.1). Élesítés előtt próbakör szükséges.
+> **Állapot:** prototípus (v0.2). Élesítés előtt próbakör szükséges.
 
 ## Kipróbálás (Google-fiók nélkül)
 
@@ -27,7 +27,9 @@ Ez egy demó adatbázist készít (45 teszt diák, 9 osztály, egy előkészíte
 2. **Kivetítő:** http://localhost:3000/kiosk#demo → itt látszik a jelenléti kód és a QR
 3. **Diák:** http://localhost:3000 (másik böngészőben vagy privát ablakban) → belépés pl. `diak1@edig.hu` → kód → szavazás
    - `diak1–5` (11.A) és `diak21–25` (9.B) szavazhat, a többi osztály nem része a próbakörnek
-4. **Admin:** **Lezárás** → jegyzőkönyv
+4. **Admin:** **Lezárás** → jegyzőkönyv (nyomtatás, JSON letöltés), igény szerint **Eredmény a kivetítőre**
+
+A jegyzőkönyv-fájl ellenőrzése: `npm run verify -- jegyzokonyv-1.json <lenyomat>`
 
 > Fejlesztői módban (`DEV_LOGIN=1`) bárki beléphet tetszőleges címmel. **Élesben ez tilos.**
 
@@ -43,7 +45,7 @@ Többek között: teljes szavazási folyamat, dupla szavazás (50 egyidejű kér
 
 1. `cp .env.example .env`, és kitölteni (Google Client ID, adminok, titkos kulcsok)
 2. `npm install --omit=dev && npm start`
-3. HTTPS mögé tenni (pl. Caddy: `szavazas.example.hu { reverse_proxy localhost:3000 }`), és `TRUST_PROXY=loopback`
+3. HTTPS mögé tenni (pl. Caddy), és `TRUST_PROXY=loopback` – részletesen: [docs/TELEPITES.md](docs/TELEPITES.md)
 
 ## Felépítés
 
@@ -56,7 +58,8 @@ src/
   auth.js      Google-token ellenőrzése
   csv.js       névjegyzék beolvasása
 public/        szavazóoldal, kivetítő, admin (sima HTML + JS, nincs build)
-scripts/       demó adatok
+scripts/       demó adatok, jegyzőkönyv-ellenőrző
+deploy/        systemd szolgáltatás, Caddy konfiguráció
 test/          automata tesztek
 docs/          rendszerleírás, rendszergazdai teendők
 ```

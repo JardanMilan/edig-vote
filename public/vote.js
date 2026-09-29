@@ -14,16 +14,21 @@ const REASONS = {
 };
 
 // A kivetítőről beolvasott QR-kód a ?kod= paraméterben hozza a jelenléti kódot.
+// Azonnal (még a Google-belépés előtt) jelezzük a szervernek, hogy a beolvasás MOST történt,
+// így a lassabb belépés (fiókválasztás, jelszó) alatt nem jár le a 30 mp-es kód.
 const urlCode = new URLSearchParams(location.search).get('kod');
-if (urlCode) {
-  sessionStorage.setItem('kod', urlCode);
-  history.replaceState(null, '', location.pathname);
-}
+const scanDone = urlCode
+  ? api('/api/presence/scan', { code: urlCode }).catch(() => {}).finally(() =>
+      history.replaceState(null, '', location.pathname))
+  : Promise.resolve();
 
 let me = null;
+let pollTimer = null;
 
 async function refresh() {
   showMsg('');
+  clearTimeout(pollTimer);
+  await scanDone;
   try {
     me = await api('/api/me');
   } catch (e) {
@@ -44,19 +49,23 @@ async function refresh() {
     $('whoami').textContent = `Bejelentkezve: ${me.email}` + (me.class ? ` (${me.class})` : '');
     if (me.isAdmin) $('whoami').textContent += ' · adminként a /admin oldalon kezelheted a szavazást.';
     show(me.reason === 'already_voted' ? 'doneView' : 'blockedView');
+    // Ha még nem indult el a szavazás, magától frissül.
+    if (me.reason === 'no_open_election') pollTimer = setTimeout(refresh, 10000);
     return;
   }
 
   if (!me.present) {
     show('codeView');
-    const pending = sessionStorage.getItem('kod');
-    if (pending) {
-      $('codeInput').value = pending;
-      sessionStorage.removeItem('kod');
-      submitCode();
-    } else {
-      $('codeInput').focus();
+    if (me.hasScan) {
+      // QR-ről jött: a beolvasáskori kódot ellenőrizzük, nem kell semmit beírni.
+      try {
+        await api('/api/presence', {});
+        return refresh();
+      } catch (e) {
+        showMsg('A beolvasott kód lejárt. Írd be a kivetítőn most látható kódot.', 'warn');
+      }
     }
+    $('codeInput').focus();
     return;
   }
 
@@ -89,11 +98,25 @@ function renderBallot() {
     input.value = c.id;
     input.dataset.label = c.label;
     label.append(input, document.createTextNode(c.label));
+    if (me.election.blockedCandidate === c.id) {
+      input.disabled = true;
+      label.classList.add('disabled');
+      const note = document.createElement('span');
+      note.className = 'muted';
+      note.textContent = ' – saját osztályodra nem szavazhatsz';
+      label.appendChild(note);
+    }
     box.appendChild(label);
   });
 }
 
 $('codeForm').onsubmit = (ev) => { ev.preventDefault(); submitCode(); };
+// A kivetítőn "947 969" formában látszik: a szóközt és egyéb karaktert kiszűrjük.
+$('codeInput').addEventListener('input', () => {
+  const clean = $('codeInput').value.replace(/\D/g, '').slice(0, 6);
+  if (clean !== $('codeInput').value) $('codeInput').value = clean;
+  if (clean.length === 6) submitCode();
+});
 $('logoutBtn').onclick = logout;
 
 $('voteForm').onsubmit = (ev) => {
@@ -112,6 +135,10 @@ $('confirmYes').onclick = async (ev) => {
     await api('/api/vote', { candidateId: picked.value });
     $('confirmDlg').close();
     showMsg('');
+    // A szerver szavazás után kiléptet; a Google se lépjen be automatikusan a következő diákként.
+    if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
+    $('logoutBtn').classList.add('hidden');
+    $('sharedHint').classList.remove('hidden');
     show('doneView');
   } catch (e) {
     $('confirmDlg').close();

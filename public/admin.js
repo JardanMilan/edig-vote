@@ -3,6 +3,7 @@
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const put = (path, body) =>
   apiRaw(path, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+const del = (path) => apiRaw(path, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } });
 const fmt = (iso) => (iso ? new Date(iso).toLocaleString('hu-HU') : '–');
 
 const STATUS = {
@@ -50,9 +51,16 @@ function renderElections() {
     const pct = e.eligibleCount ? Math.round((100 * e.votedCount) / e.eligibleCount) : 0;
     const who = e.allowedClasses ? e.allowedClasses.join(', ') : 'minden osztály';
     let actions = '';
-    if (e.status === 'draft') actions = `<button data-act="open" data-id="${e.id}">Megnyitás</button>`;
+    if (e.status === 'draft') {
+      actions = `<button class="secondary" data-act="delete" data-id="${e.id}">Törlés</button>
+                 <button data-act="open" data-id="${e.id}">Megnyitás</button>`;
+    }
     if (e.status === 'open') actions = `<button class="danger" data-act="close" data-id="${e.id}">Lezárás</button>`;
-    if (e.status === 'closed') actions = `<button data-act="protocol" data-id="${e.id}">Jegyzőkönyv</button>`;
+    if (e.status === 'closed') {
+      actions = `<button class="secondary" data-act="publish" data-id="${e.id}">
+                   ${e.published ? 'Kivetítőről levétel' : 'Eredmény a kivetítőre'}</button>
+                 <button data-act="protocol" data-id="${e.id}">Jegyzőkönyv</button>`;
+    }
     return `
       <div class="card" style="margin:12px 0">
         <div class="el-head">
@@ -60,6 +68,8 @@ function renderElections() {
             <b>${esc(e.name)}</b>
             <span class="badge ${cls}">${st}</span>
             ${e.isTrial ? '<span class="badge">Próbakör</span>' : ''}
+            ${e.noSelfVote ? '<span class="badge gray">Saját osztályra nem</span>' : ''}
+            ${e.published ? '<span class="badge ok">Kivetítőn</span>' : ''}
           </div>
           <div class="row">${actions}</div>
         </div>
@@ -97,6 +107,11 @@ const ACTIONS = {
   election_closed: 'Szavazás lezárva',
   voters_replaced: 'Névjegyzék cserélve',
   absent_set: 'Hiányzók beállítva',
+  absent_toggled: 'Hiányzás módosítva',
+  election_deleted: 'Szavazás törölve',
+  results_published: 'Eredmény kivetítőre téve',
+  results_unpublished: 'Eredmény levéve a kivetítőről',
+  personal_data_purged: 'Személyes adatok törölve',
 };
 
 async function renderAudit() {
@@ -115,6 +130,7 @@ async function showProtocol(id) {
       <h2>Szavazási jegyzőkönyv</h2>
       <div class="row noprint">
         <button>Nyomtatás</button>
+        <a class="btn secondary" style="background:transparent;color:var(--accent);border:1px solid var(--line)" href="/api/admin/elections/${id}/protocol.json" download>JSON letöltése</a>
         <button class="secondary">Bezárás</button>
       </div>
     </div>
@@ -141,6 +157,7 @@ async function showProtocol(id) {
     <p class="muted">Részvétel osztályonként: ${p.turnoutByClass.map((t) => `${esc(t.class)}: ${t.n}`).join(' · ') || '–'}</p>
     <p class="muted" style="margin-top:16px">Jegyzőkönyv lenyomata (SHA-256):</p>
     <p class="hash">${esc(resultHash)}</p>
+    <p class="muted noprint">Ellenőrzés: a letöltött JSON-ra <code>npm run verify -- jegyzokonyv-${id}.json</code> ugyanezt a lenyomatot kell kiírja.</p>
     <div style="margin-top:40px" class="grid2">
       <p>…………………………………<br>igazgató</p>
       <p>…………………………………<br>DÖK-segítő tanár</p>
@@ -168,6 +185,15 @@ $('elections').onclick = async (ev) => {
       return showProtocol(id);
     } else if (act === 'protocol') {
       return showProtocol(id);
+    } else if (act === 'delete') {
+      if (!confirm(`Törlöd: „${el.name}”?`)) return;
+      await del(`/api/admin/elections/${id}`);
+    } else if (act === 'publish') {
+      const msg = el.published
+        ? 'Leveszed az eredményt a kivetítőről?'
+        : 'Megjelenjen az eredmény a kivetítőn (/kiosk)? Mindenki látni fogja, aki a kivetítőt nézi.';
+      if (!confirm(msg)) return;
+      await api(`/api/admin/elections/${id}/publish`, { published: !el.published });
     }
     showMsg('');
     load();
@@ -182,7 +208,9 @@ $('newForm').onsubmit = async (ev) => {
   });
   const allowedClasses = [...$('classPick').querySelectorAll('input:checked')].map((i) => i.value);
   try {
-    await api('/api/admin/elections', { name: $('elName').value, isTrial: $('elTrial').checked, candidates, allowedClasses });
+    await api('/api/admin/elections', {
+      name: $('elName').value, isTrial: $('elTrial').checked, noSelfVote: $('elNoSelf').checked, candidates, allowedClasses,
+    });
     showMsg('Szavazás létrehozva. A listában megnyithatod.', 'ok');
     $('newForm').reset();
     load();
@@ -209,6 +237,56 @@ $('absentBtn').onclick = async () => {
   try {
     const r = await put('/api/admin/absent', { emails: $('absentList').value });
     showMsg(`Hiányzók: ${r.matched} diák megjelölve` + (r.unknown ? `, ${r.unknown} cím nincs a névjegyzékben.` : '.'), r.unknown ? 'warn' : 'ok');
+    load();
+  } catch (e) { showMsg(e.message); }
+};
+
+// ----- Ügyelet: diák keresése -----
+let searchTimer = null;
+$('searchInput').addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(runSearch, 250);
+});
+
+async function runSearch() {
+  const term = $('searchInput').value.trim();
+  if (term.length < 2) { $('searchTable').innerHTML = ''; return; }
+  try {
+    const r = await api('/api/admin/voters/search?q=' + encodeURIComponent(term));
+    if (!r.voters.length) {
+      $('searchTable').innerHTML = '<tr><td class="muted">Nincs találat a névjegyzékben – ez a diák nem szavazhat. Ha tévedés, a névjegyzéket kell javítani (nyitott szavazás alatt nem lehet).</td></tr>';
+      return;
+    }
+    $('searchTable').innerHTML =
+      `<tr><th>Email</th><th>Osztály</th><th>Szavazott?</th><th></th></tr>` +
+      r.voters.map((v) => `
+        <tr>
+          <td>${esc(v.email)}</td>
+          <td>${esc(v.class)}</td>
+          <td>${v.voted === null ? '<span class="muted">nincs nyitott szavazás</span>' : v.voted ? '<span class="badge ok">igen</span>' : 'még nem'}</td>
+          <td class="num"><button class="${v.absent ? '' : 'secondary'}" data-email="${esc(v.email)}" data-absent="${v.absent ? 0 : 1}">
+            ${v.absent ? 'Hiányzó → jelen' : 'Jelen → hiányzó'}</button></td>
+        </tr>`).join('');
+  } catch (e) { showMsg(e.message); }
+}
+
+$('searchTable').onclick = async (ev) => {
+  const b = ev.target.closest('button[data-email]');
+  if (!b) return;
+  try {
+    await put('/api/admin/voters/absent', { email: b.dataset.email, absent: b.dataset.absent === '1' });
+    runSearch();
+    load();
+  } catch (e) { showMsg(e.message); }
+};
+
+// ----- Adatvédelem -----
+$('purgeBtn').onclick = async () => {
+  const c = prompt('A névjegyzék, a "ki szavazott" lista és a munkamenetek végleg törlődnek. A jegyzőkönyvek megmaradnak.\n\nMegerősítéshez írd be: TÖRLÉS');
+  if (c === null) return;
+  try {
+    const r = await api('/api/admin/purge', { confirm: c });
+    showMsg(`Törölve: ${r.voters} diák a névjegyzékből, ${r.voted} szavazott-bejegyzés, ${r.sessions} munkamenet.`, 'ok');
     load();
   } catch (e) { showMsg(e.message); }
 };

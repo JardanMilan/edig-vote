@@ -78,7 +78,9 @@ function createApp({ cfg, db, verifyGoogle }) {
       'X-Content-Type-Options': 'nosniff',
       'Referrer-Policy': 'no-referrer',
       'Cache-Control': 'no-store',
+      'X-Frame-Options': 'DENY',
     });
+    if (cfg.cookieSecure) res.set('Strict-Transport-Security', 'max-age=31536000');
     next();
   });
 
@@ -86,7 +88,7 @@ function createApp({ cfg, db, verifyGoogle }) {
 
   // CSRF-védelem: minden módosító kérésnek JSON-nak kell lennie (+ SameSite=Strict süti).
   app.use('/api', (req, res, next) => {
-    if (req.method !== 'GET' && !req.is('application/json')) {
+    if (req.method !== 'GET' && !/^application\/json\b/i.test(req.get('content-type') || '')) {
       return res.status(415).json({ error: 'JSON kérés szükséges.' });
     }
     next();
@@ -157,7 +159,7 @@ function createApp({ cfg, db, verifyGoogle }) {
   function setSessionCookie(res, token, maxAgeSec) {
     const parts = [`sid=${token}`, 'Path=/', 'HttpOnly', 'SameSite=Strict', `Max-Age=${maxAgeSec}`];
     if (cfg.cookieSecure) parts.push('Secure');
-    res.set('Set-Cookie', parts.join('; '));
+    res.append('Set-Cookie', parts.join('; '));
   }
 
   function startSession(res, email) {
@@ -230,15 +232,49 @@ function createApp({ cfg, db, verifyGoogle }) {
       canVote: el.ok,
       reason: el.reason,
       present: req.session.present_until > Date.now(),
+      hasScan: !!readScan(req),
       election: el.election
         ? {
             id: el.election.id,
             name: el.election.name,
             isTrial: !!el.election.is_trial,
             candidates: q.candidates.all(el.election.id),
+            // Ha a saját osztályra nem lehet szavazni, ezt a jelöltet a felület letiltja.
+            blockedCandidate: el.election.no_self_vote && el.voter ? el.voter.class : null,
           }
         : null,
     });
+  });
+
+  // ----- QR-beolvasás megjegyzése -----
+  // Aki a kivetített QR-t beolvassa, annak a Google-belépés (fiókválasztás, jelszó) akár percekig tarthat,
+  // miközben a kód 30 mp-enként változik. Ezért a beolvasás PILLANATÁT a szerver aláírva, sütiben rögzíti,
+  // és belépés után azt ellenőrzi, hogy a kód a beolvasáskor érvényes volt-e.
+  // Ez a végpont szándékosan nem árulja el, hogy a kód helyes-e (különben bejelentkezés nélkül lehetne
+  // találgatni); az ellenőrzés csak belépés után, a diákonkénti próbálkozás-korláttal történik.
+  const scanSig = (payload) => crypto.createHmac('sha256', cfg.secret).update('scan:' + payload).digest('base64url');
+
+  function setScanCookie(res, value, maxAgeSec) {
+    const parts = [`scan=${value}`, 'Path=/api', 'HttpOnly', 'SameSite=Strict', `Max-Age=${maxAgeSec}`];
+    if (cfg.cookieSecure) parts.push('Secure');
+    res.append('Set-Cookie', parts.join('; '));
+  }
+
+  function readScan(req) {
+    const raw = parseCookies(req.headers.cookie).scan;
+    if (!raw) return null;
+    const [code, t, sig] = raw.split('.');
+    if (!code || !t || !sig || scanSig(`${code}.${t}`) !== sig) return null;
+    if (Date.now() - Number(t) > cfg.scanTtlSec * 1000) return null;
+    return { code, t: Number(t) };
+  }
+
+  app.post('/api/presence/scan', (req, res, next) => {
+    const code = String(req.body.code || '').replace(/\D/g, '');
+    if (code.length !== 6) return next(new HttpError(400, 'Érvénytelen kód.', 'bad_code'));
+    const payload = `${code}.${Date.now()}`;
+    setScanCookie(res, `${payload}.${scanSig(payload)}`, cfg.scanTtlSec);
+    res.json({ ok: true });
   });
 
   // Jelenléti kód beírása -> a munkamenet PRESENCE_TTL_SEC ideig "jelen van".
@@ -253,7 +289,16 @@ function createApp({ cfg, db, verifyGoogle }) {
       const min = Math.ceil((f.lockedUntil - Date.now()) / 60000);
       return next(new HttpError(429, `Túl sok hibás kód. Próbáld újra ${min} perc múlva.`, 'locked'));
     }
-    if (!verifyCode(cfg, el.election.id, req.body.code)) {
+    // Kód forrása: a most beírt kód, vagy a korábbi QR-beolvasás (a beolvasás idejére ellenőrizve).
+    const typed = req.body.code !== undefined && req.body.code !== '';
+    const scan = typed ? null : readScan(req);
+    if (!typed && !scan) return next(new HttpError(400, 'Írd be a kivetítőn látható kódot.', 'bad_code'));
+    const ok = typed
+      ? verifyCode(cfg, el.election.id, req.body.code)
+      : verifyCode(cfg, el.election.id, scan.code, scan.t);
+    if (scan) setScanCookie(res, '', 0); // egyszer használható
+
+    if (!ok) {
       f.fails += 1;
       if (f.fails >= MAX_CODE_FAILS) Object.assign(f, { fails: 0, lockedUntil: Date.now() + CODE_LOCK_MS });
       codeFails.set(email, f);
@@ -292,12 +337,18 @@ function createApp({ cfg, db, verifyGoogle }) {
     if (!(req.session.present_until > Date.now())) {
       return next(new HttpError(403, 'Előbb írd be a kivetítőn látható kódot.', 'not_present'));
     }
+    const candidateId = String(req.body.candidateId || '');
+    if (el.election.no_self_vote && candidateId === el.voter.class) {
+      return next(new HttpError(400, 'A saját osztályodra nem szavazhatsz.', 'own_class'));
+    }
     try {
-      castVote(el.election.id, email, String(req.body.candidateId || ''));
+      castVote(el.election.id, email, candidateId);
     } catch (e) {
       return next(e);
     }
-    q.sessionPresent.run(0, req.session.tokenHash);
+    // Szavazás után kiléptetjük: közös gépen (gépterem) a következő diák ne az ő munkamenetében folytassa.
+    q.sessionDel.run(req.session.tokenHash);
+    setSessionCookie(res, '', 0);
     // Szándékosan nem adunk vissza semmit, ami a választást azonosítaná.
     res.json({ ok: true });
   });
@@ -313,7 +364,21 @@ function createApp({ cfg, db, verifyGoogle }) {
     const adminOk = req.session && isAdmin(req.session.email);
     if (!keyOk && !adminOk) return next(new HttpError(403, 'Érvénytelen kivetítő-kulcs.'));
     const election = q.openElection.get();
-    if (!election) return res.json({ open: false });
+    if (!election) {
+      // Nincs nyitott szavazás: ha az admin közzétette, a legutóbbi eredményt mutatjuk.
+      const pub = db
+        .prepare("SELECT protocol FROM elections WHERE status = 'closed' AND published = 1 ORDER BY closed_at DESC LIMIT 1")
+        .get();
+      if (!pub) return res.json({ open: false });
+      const p = JSON.parse(pub.protocol);
+      return res.json({
+        open: false,
+        results: {
+          name: p.name, isTrial: p.isTrial, results: p.results, winners: p.winners,
+          ballotCount: p.ballotCount, votedCount: p.votedCount, eligibleCount: p.eligibleCount,
+        },
+      });
+    }
     const c = currentCode(cfg, election.id);
     const url = `${req.protocol}://${req.get('host')}/?kod=${c.code}`;
     const qrSvg = await QRCode.toString(url, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' });
@@ -338,6 +403,8 @@ function createApp({ cfg, db, verifyGoogle }) {
       closedAt: e.closed_at,
       candidates: q.candidates.all(e.id),
       // Élő részvétel: CSAK a létszám, az eredmény lezárásig nem látható.
+      noSelfVote: !!e.no_self_vote,
+      published: !!e.published,
       votedCount: q.votedCount.get(e.id).n,
       eligibleCount: e.status === 'closed' ? JSON.parse(e.protocol).eligibleCount : eligibleCount(e),
       resultHash: e.result_hash,
@@ -384,10 +451,23 @@ function createApp({ cfg, db, verifyGoogle }) {
     if (new Set(candidates.map((c) => c.id)).size !== candidates.length) {
       return next(new HttpError(400, 'Ismétlődő jelölt-azonosító.'));
     }
+    const known = new Set(q.classCounts.all().map((r) => r.class));
+    const unknownClasses = allowed.filter((c) => !known.has(c));
+    if (unknownClasses.length) {
+      return next(new HttpError(400, `Ilyen osztály nincs a névjegyzékben: ${unknownClasses.join(', ')}`));
+    }
     const id = db.transaction(() => {
       const info = db
-        .prepare('INSERT INTO elections (name, is_trial, allowed_classes, created_at) VALUES (?, ?, ?, ?)')
-        .run(name, req.body.isTrial ? 1 : 0, allowed.length ? JSON.stringify(allowed) : null, nowIso());
+        .prepare(
+          'INSERT INTO elections (name, is_trial, allowed_classes, no_self_vote, created_at) VALUES (?, ?, ?, ?, ?)'
+        )
+        .run(
+          name,
+          req.body.isTrial ? 1 : 0,
+          allowed.length ? JSON.stringify(allowed) : null,
+          req.body.noSelfVote ? 1 : 0,
+          nowIso()
+        );
       const eid = info.lastInsertRowid;
       const insC = db.prepare('INSERT INTO candidates (election_id, id, label, position) VALUES (?, ?, ?, ?)');
       const insT = db.prepare('INSERT INTO tally (election_id, candidate_id, count) VALUES (?, ?, 0)');
@@ -397,7 +477,9 @@ function createApp({ cfg, db, verifyGoogle }) {
       });
       return eid;
     })();
-    audit(req.session.email, 'election_created', { id, name, candidates, allowedClasses: allowed });
+    audit(req.session.email, 'election_created', {
+      id, name, candidates, allowedClasses: allowed, noSelfVote: !!req.body.noSelfVote,
+    });
     res.json({ ok: true, id: Number(id) });
   });
 
@@ -406,6 +488,9 @@ function createApp({ cfg, db, verifyGoogle }) {
     if (!e) return next(new HttpError(404, 'Nincs ilyen szavazás.'));
     if (e.status !== 'draft') return next(new HttpError(409, 'Csak előkészített szavazás nyitható meg.'));
     if (q.openElection.get()) return next(new HttpError(409, 'Már van nyitott szavazás.'));
+    if (eligibleCount(e) === 0) {
+      return next(new HttpError(409, 'Nincs egyetlen jogosult szavazó sem (üres névjegyzék vagy mindenki hiányzik).'));
+    }
     db.prepare("UPDATE elections SET status = 'open', opened_at = ? WHERE id = ?").run(nowIso(), e.id);
     audit(req.session.email, 'election_opened', { id: e.id });
     res.json({ ok: true });
@@ -426,6 +511,7 @@ function createApp({ cfg, db, verifyGoogle }) {
         name: e.name,
         isTrial: !!e.is_trial,
         allowedClasses: allowedClasses(e),
+        noSelfVote: !!e.no_self_vote,
         openedAt: e.opened_at,
         closedAt,
         eligibleCount: eligibleCount(e),
@@ -453,9 +539,91 @@ function createApp({ cfg, db, verifyGoogle }) {
     res.json({ protocol: JSON.parse(e.protocol), resultHash: e.result_hash });
   });
 
+  // A jegyzőkönyv pontosan abban a formában, ahogy a lenyomat készült: ezzel bárki ellenőrizheti
+  // (npm run verify -- jegyzokonyv.json), hogy a kinyomtatott lenyomat ehhez a fájlhoz tartozik.
+  admin.get('/elections/:id/protocol.json', (req, res, next) => {
+    const e = q.election.get(req.params.id);
+    if (!e) return next(new HttpError(404, 'Nincs ilyen szavazás.'));
+    if (e.status !== 'closed') return next(new HttpError(403, 'Csak lezárt szavazás jegyzőkönyve tölthető le.'));
+    res.set('Content-Type', 'application/json; charset=utf-8');
+    res.set('Content-Disposition', `attachment; filename="jegyzokonyv-${e.id}.json"`);
+    res.send(e.protocol);
+  });
+
+  admin.post('/elections/:id/publish', (req, res, next) => {
+    const e = q.election.get(req.params.id);
+    if (!e) return next(new HttpError(404, 'Nincs ilyen szavazás.'));
+    if (e.status !== 'closed') return next(new HttpError(409, 'Csak lezárt szavazás eredménye tehető közzé.'));
+    const published = req.body.published ? 1 : 0;
+    db.prepare('UPDATE elections SET published = ? WHERE id = ?').run(published, e.id);
+    audit(req.session.email, published ? 'results_published' : 'results_unpublished', { id: e.id });
+    res.json({ ok: true });
+  });
+
+  admin.delete('/elections/:id', (req, res, next) => {
+    const e = q.election.get(req.params.id);
+    if (!e) return next(new HttpError(404, 'Nincs ilyen szavazás.'));
+    if (e.status !== 'draft') return next(new HttpError(409, 'Csak még meg nem nyitott szavazás törölhető.'));
+    db.transaction(() => {
+      db.prepare('DELETE FROM tally WHERE election_id = ?').run(e.id);
+      db.prepare('DELETE FROM candidates WHERE election_id = ?').run(e.id);
+      db.prepare('DELETE FROM elections WHERE id = ?').run(e.id);
+    })();
+    audit(req.session.email, 'election_deleted', { id: e.id, name: e.name });
+    res.json({ ok: true });
+  });
+
+  // Ügyelet a szavazás napján: diák keresése, hiányzás javítása.
+  // Az admin látja, hogy valaki szavazott-e (mint papíron az aláírt névsor) – de azt nem, hogy mire.
+  admin.get('/voters/search', (req, res) => {
+    const term = String(req.query.q || '').trim().toLowerCase();
+    if (term.length < 2) return res.json({ voters: [] });
+    const open = q.openElection.get();
+    const rows = db
+      .prepare("SELECT email, class, absent FROM voters WHERE email LIKE ? ESCAPE '\\' ORDER BY email LIMIT 20")
+      .all('%' + term.replace(/[\\%_]/g, (m) => '\\' + m) + '%');
+    res.json({
+      openElection: !!open,
+      voters: rows.map((v) => ({
+        email: v.email,
+        class: v.class,
+        absent: !!v.absent,
+        voted: open ? !!q.hasVoted.get(open.id, v.email) : null,
+      })),
+    });
+  });
+
+  admin.put('/voters/absent', (req, res, next) => {
+    const email = String(req.body.email || '').toLowerCase();
+    const r = db.prepare('UPDATE voters SET absent = ? WHERE email = ?').run(req.body.absent ? 1 : 0, email);
+    if (r.changes !== 1) return next(new HttpError(404, 'Nincs ilyen diák a névjegyzékben.'));
+    audit(req.session.email, 'absent_toggled', { email, absent: !!req.body.absent });
+    res.json({ ok: true });
+  });
+
+  // Adatvédelem: a szavazás után a személyes adatok (névjegyzék, ki szavazott, munkamenetek) törlése.
+  // A jegyzőkönyvek (csak számok) megmaradnak.
+  admin.post('/purge', (req, res, next) => {
+    if (req.body.confirm !== 'TÖRLÉS') return next(new HttpError(400, 'Megerősítéshez írd be: TÖRLÉS'));
+    if (q.openElection.get()) return next(new HttpError(409, 'Nyitott szavazás alatt nem törölhető.'));
+    const counts = db.transaction(() => ({
+      voters: db.prepare('DELETE FROM voters').run().changes,
+      voted: db.prepare('DELETE FROM voted').run().changes,
+      sessions: db.prepare('DELETE FROM sessions WHERE token != ?').run(req.session.tokenHash).changes,
+    }))();
+    audit(req.session.email, 'personal_data_purged', counts);
+    res.json({ ok: true, ...counts });
+  });
+
   admin.get('/audit', (req, res) => res.json({ log: q.auditList.all() }));
 
   app.use('/api/admin', admin);
+
+  // Állapotjelzés (monitorozáshoz, pl. uptime-figyelő)
+  app.get('/healthz', (req, res) => {
+    db.prepare('SELECT 1').get();
+    res.json({ ok: true, openElection: !!q.openElection.get() });
+  });
 
   // ---------- statikus oldalak ----------
 

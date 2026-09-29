@@ -1,0 +1,22 @@
+[Unit]
+Description=Diáknapi szavazás (edig-vote)
+After=network.target
+
+[Service]
+Type=simple
+User=edigvote
+WorkingDirectory=/opt/edig-vote
+EnvironmentFile=/opt/edig-vote/.env
+ExecStart=/usr/bin/node src/server.js
+Restart=on-failure
+RestartSec=2
+
+# Védelem: a szolgáltatás csak a saját adatmappájába írhat
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/edig-vote/data
+
+[Install]
+WantedBy=multi-user.target

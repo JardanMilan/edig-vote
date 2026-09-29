@@ -1,6 +1,6 @@
 # Rendszerleírás – elektronikus diáknapi szavazás
 
-**Dobó István Gimnázium, Eger** · Tervezet, v0.1 · 2026. szeptember
+**Dobó István Gimnázium, Eger** · Tervezet, v0.2 · 2026. szeptember
 
 Ez a dokumentum leírja, hogyan működik a rendszer, miért így, és mit nem tud (még). Célja, hogy a DÖK, a DÖK-segítő tanár, az igazgatóság és a rendszergazda egy dokumentumból el tudja dönteni, használható-e a rendszer, és milyen feltételekkel.
 
@@ -105,7 +105,8 @@ sequenceDiagram
 ### Jelenléti kód
 - A kivetítőn (`/kiosk`) egy 6 jegyű kód látszik, ami **30 másodpercenként változik**; mellette QR-kód, ami a kóddal együtt nyitja meg a szavazóoldalt.
 - A kódot a szerver egy titkos kulcsból számolja (a bankos kétlépcsős azonosítással azonos elven, TOTP-szerűen), előre nem kitalálható.
-- Az aktuális és az előző kódot fogadja el (kb. 30–60 mp), hogy a beírás közbeni váltás ne okozzon gondot.
+- Az aktuális és az előző kódot fogadja el (kb. 30–60 mp), hogy a beírás közbeni váltás ne okozzon gondot. A kód szóközzel is beírható („947 969”).
+- **QR-kóddal:** a beolvasás pillanatát a szerver aláírva rögzíti, és a Google-belépés *után* azt ellenőrzi, hogy a kód a beolvasáskor érvényes volt-e. Így a lassabb belépés (fiókválasztás, jelszó) alatt sem jár le a kód – erre 3 perc van. A beolvasás egyszer használható, és belépés nélkül nem derül ki, hogy a kód helyes volt-e (nem lehet vele találgatni).
 - 5 hibás próbálkozás után 5 perc zárolás (a találgatás ellen).
 - A kivetítő oldalt egy kulccsal (vagy admin belépéssel) lehet megnyitni.
 
@@ -125,18 +126,21 @@ A rendszer csak akkor hiteles, ha az eljárás is az. Javasolt menet:
 3. Az éles szavazást az admin **előkészíti**, de csak a kezdés pillanatában **nyitja meg**.
 
 **Közben**
-4. A részvétel (hányan szavaztak) élőben látható az adminfelületen, **az eredmény viszont senkinek, adminnak sem**. Ez technikailag is így van: a szerver lezárás előtt nem ad ki eredményt.
-5. A névjegyzék nyitott szavazás alatt nem cserélhető.
+4. Szavazás után a rendszer automatikusan kilépteti a diákot, és a Google automatikus belépését is kikapcsolja – közös gépen (gépterem) a következő diák nem a másik fiókjában folytatja.
+5. Az ügyeletes admin diákot kereshet: szerepel-e a névjegyzékben, hiányzónak van-e jelölve (ez azonnal javítható), szavazott-e már. Azt, hogy kire szavazott, a rendszer nem tudja – ez a papíros aláírt névsornak felel meg.
+6. A részvétel (hányan szavaztak) élőben látható az adminfelületen, **az eredmény viszont senkinek, adminnak sem**. Ez technikailag is így van: a szerver lezárás előtt nem ad ki eredményt.
+7. A névjegyzék nyitott szavazás alatt nem cserélhető.
 
 **Lezárás**
-6. A lezárás tanúk előtt történik: igazgató (vagy helyettes) és a versengő osztályok osztályfőnökei – ugyanazok, akik eddig számoltak, csak 2 óra helyett 2 perc.
-7. Lezáráskor a rendszer automatikusan elkészíti a **jegyzőkönyvet**:
+8. A lezárás tanúk előtt történik: igazgató (vagy helyettes) és a versengő osztályok osztályfőnökei – ugyanazok, akik eddig számoltak, csak 2 óra helyett 2 perc.
+9. Lezáráskor a rendszer automatikusan elkészíti a **jegyzőkönyvet**:
    - jogosultak száma, szavazók száma, leadott szavazatok száma
    - **egyezés-ellenőrzés:** szavazók száma = szavazatok száma (ha nem egyezik, pirosan jelzi)
    - eredmény jelöltenként, holtverseny jelzése
    - részvétel osztályonként
    - a jegyzőkönyv **SHA-256 lenyomata** (ujjlenyomata): ha utólag bárki egyetlen számot is megváltoztatna, a lenyomat nem egyezne
-8. A jegyzőkönyvet kinyomtatják és aláírják; a lenyomat a nyomtatott példányon is szerepel.
+10. A jegyzőkönyvet kinyomtatják és aláírják; a lenyomat a nyomtatott példányon is szerepel. A jegyzőkönyv JSON-fájlként is letölthető; `npm run verify -- jegyzokonyv-1.json <lenyomat>` bárki gépén ellenőrzi, hogy a fájl egyezik-e az aláírt példánnyal.
+11. Ha a DÖK úgy dönt, az admin egy gombbal **kivetítheti az eredményt** (a `/kiosk` oldalon, oszlopdiagrammal), és le is veheti.
 
 ## 8. Kockázatok és védekezés
 
@@ -153,7 +157,9 @@ A rendszer csak akkor hiteles, ha az eljárás is az. Javasolt menet:
 | Anonimitás megsértése | Csak számlálók, nincs idő/sorrend | Aki a szerverhez közvetlenül hozzáfér, **élőben** figyelve a számlálókat és a munkameneteket elméletben összefüggést kereshet → lásd lent |
 | Az eredmény utólagos módosítása | Jegyzőkönyv + lenyomat + aláírt nyomtatott példány | A lezárás előtt a szerver üzemeltetője elvileg belenyúlhat → lásd lent |
 | Szerver / internet leáll | Egyszerű rendszer, próbakör, mentés | **Papíros tartalékterv** szükséges |
-| Kiberbiztonsági hiba | Szerveroldali ellenőrzés mindenhol, CSRF-védelem, szigorú CSP, automata tesztek | Prototípus – élesítés előtt érdemes egy második szempár (pl. infótanár) |
+| Kiberbiztonsági hiba | Szerveroldali ellenőrzés mindenhol, CSRF-védelem, szigorú CSP, HSTS, automata tesztek minden változtatásnál (Linux + Windows) | Élesítés előtt érdemes egy második szempár (pl. infótanár) |
+| Közös gépen a következő diák a másik fiókjával szavaz | Szavazás után automatikus kiléptetés, Google automatikus belépés kikapcsolása, figyelmeztetés | A Google-fiókból a diáknak magának kell kilépnie – felügyelő tanár figyeljen rá |
+| Tömeges belépési / kódkísérlet | Diákonkénti próbálkozás-korlát a kódra | IP alapú korlát szándékosan nincs: az egész iskola egy IP-címről jön, az a jogos diákokat zárná ki |
 
 **Az üzemeltető kérdése.** Minden elektronikus szavazásnál kulcskérdés, hogy aki a szervert üzemelteti, elvileg hozzáférhet az adatbázishoz. Ezért javasolt:
 - a szervert **ne egy érintett diák** kezelje a szavazás alatt – ideálisan a rendszergazda vagy egy tanár kezében legyen a hozzáférés;
@@ -170,7 +176,8 @@ A rendszer támogatja, hogy egy szavazáson csak kijelölt osztályok vegyenek r
 
 ## 10. Üzemeltetés
 
-- **Futtatás:** Node.js 22.13+, `npm install`, `npm start`. Egy olcsó VPS, az iskola saját szervere, vagy bármilyen Node.js-t futtató tárhely megfelel.
+- **Futtatás:** Node.js 22.13+, `npm install`, `npm start`. Egy olcsó VPS, az iskola saját szervere, vagy bármilyen Node.js-t futtató tárhely megfelel. Lépésről lépésre: [TELEPITES.md](TELEPITES.md) (systemd + Caddy).
+- **Állapotfigyelés:** `GET /healthz`.
 - **HTTPS kötelező** (Google-bejelentkezés és a biztonságos süti miatt) – pl. Caddy vagy nginx + Let's Encrypt.
 - **Terhelés:** 550 diák, még ha egyszerre is szavaznak, néhány száz kérés percenként – ez egy kis szervernek semmi.
 - **Mentés:** a szavazás lezárása után az adatbázisfájl (`data/szavazas.db`) másolata.
@@ -183,7 +190,7 @@ Ha élesben a rendszer nem elérhető (internet, szerver, Google-bejelentkezés)
 
 - **Tárolt adatok:** diák emailcíme, osztálya, hiányzás aznap, szavazott-e. **Nem tároljuk:** kire szavazott, helyadatot, Google-profiladatot az emailen kívül.
 - **Adatkezelő:** az iskola. Az adatkezelési tájékoztatót (vagy a meglévő kiegészítését) az igazgatósággal / adatvédelmi felelőssel egyeztetni kell.
-- **Megőrzés:** javaslat – a szavazás után 30 nappal a `voters`, `voted` és `sessions` tábla törlése; a jegyzőkönyv (csak számok) megmarad.
+- **Megőrzés:** javaslat – a szavazás után 30 nappal a személyes adatok törlése. Ez az admin felületen egy gombbal megtehető („Személyes adatok törlése”): törli a névjegyzéket, a „ki szavazott” listát és a munkameneteket; a jegyzőkönyv (csak számok) megmarad.
 
 ## 12. Ütemterv a diáknapig
 
@@ -202,7 +209,7 @@ Ha a Google-engedély vagy a jóváhagyás csúszik, a reális alternatíva: a d
 ## 13. Eldöntendő kérdések a DÖK számára
 
 1. **Hol és mikor szavaznak?** Osztályonként tanórán, tanár jelenlétében (ajánlott) / gépteremben / szabadon egy idősávban?
-2. **Szavazhatnak-e a 11.-esek a saját osztályukra?** (A rendszer mindkettőt tudja – ha nem, az kis fejlesztés.)
+2. **Szavazhatnak-e a 11.-esek a saját osztályukra?** (A rendszer szavazásonként beállíthatóan mindkettőt tudja.)
 3. **Ki vezeti a hiányzók listáját** aznap reggel, és honnan (KRÉTA)?
 4. **Holtverseny** esetén mi a szabály?
 5. **Ki üzemelteti** a szervert a szavazás alatt, és kik a lezárás tanúi?

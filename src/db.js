@@ -76,6 +76,19 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 `;
 
+// Új oszlopok felvétele régebbi adatbázisokba is (v0.1 -> v0.2).
+function migrate(db) {
+  const cols = db.prepare('PRAGMA table_info(elections)').all().map((c) => c.name);
+  if (!cols.includes('no_self_vote')) {
+    // 1 = a diák nem szavazhat a saját osztályára (ha az osztálya jelölt)
+    db.exec('ALTER TABLE elections ADD COLUMN no_self_vote INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!cols.includes('published')) {
+    // 1 = az eredmény lezárás után a kivetítőn is megjelenhet
+    db.exec('ALTER TABLE elections ADD COLUMN published INTEGER NOT NULL DEFAULT 0');
+  }
+}
+
 function openDb(dbPath) {
   if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(path.resolve(dbPath)), { recursive: true });
   const db = new DatabaseSync(dbPath);
@@ -83,6 +96,7 @@ function openDb(dbPath) {
   db.exec('PRAGMA foreign_keys = ON');
   db.exec('PRAGMA busy_timeout = 5000');
   db.exec(SCHEMA);
+  migrate(db);
 
   // db.transaction(fn) -> függvény, ami fn-t egyetlen tranzakcióban futtatja.
   // BEGIN IMMEDIATE: már az elején írási zárat kér, így két szavazás nem keveredhet.

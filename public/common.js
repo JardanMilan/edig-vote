@@ -74,5 +74,6 @@ async function setupLogin(onLoggedIn) {
 
 async function logout() {
   await api('/api/logout', {});
+  if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
   location.href = location.pathname;
 }

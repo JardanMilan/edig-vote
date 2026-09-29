@@ -1,0 +1,7 @@
+# Caddy automatikusan kér és megújít Let's Encrypt tanúsítványt.
+# Cseréld le a domaint a sajátodra (a DNS A rekordja mutasson a szerverre).
+
+szavazas.example.hu {
+	encode gzip
+	reverse_proxy 127.0.0.1:3000
+}

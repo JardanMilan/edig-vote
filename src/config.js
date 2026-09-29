@@ -31,6 +31,8 @@ function loadConfig(overrides = {}) {
     codeGraceWindows: Number(env.CODE_GRACE_WINDOWS || 1),
     // Sikeres kódbeírás után ennyi ideig lehet szavazni
     presenceTtlSec: Number(env.PRESENCE_TTL_SEC || 300),
+    // QR-beolvasás után ennyi ideje van a diáknak belépni a Google-fiókjával
+    scanTtlSec: Number(env.SCAN_TTL_SEC || 180),
 
     // Opcionális: csak ezekről az IP-kről / tartományokról lehet szavazni (pl. iskolai NAT IP)
     allowedIps: list(env.ALLOWED_IPS),
