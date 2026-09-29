@@ -10,7 +10,7 @@ Elektronikus szavazórendszer a Dobó István Gimnázium (Eger) diáknapjára. K
 
 📄 **[Részletes rendszerleírás](docs/RENDSZERLEIRAS.md)** · 🔧 **[Rendszergazdai teendők](docs/RENDSZERGAZDA.md)** · 🚀 **[Telepítés](docs/TELEPITES.md)** · 📝 **[Változások](CHANGELOG.md)**
 
-> **Állapot:** prototípus (v0.2). Élesítés előtt próbakör szükséges.
+> **Állapot:** prototípus (v0.2.1). Élesítés előtt próbakör szükséges.
 
 ## Kipróbálás (Google-fiók nélkül)
 

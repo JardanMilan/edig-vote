@@ -163,9 +163,13 @@ async function showProtocol(id) {
       <p>…………………………………<br>DÖK-segítő tanár</p>
     </div>`;
   const [printBtn, closeBtn] = $('protocolView').querySelectorAll('.noprint button');
-  printBtn.onclick = () => { document.body.classList.add('printing'); window.print(); document.body.classList.remove('printing'); };
-  closeBtn.onclick = () => $('protocolView').classList.add('hidden');
+  printBtn.onclick = () => window.print();
+  closeBtn.onclick = () => {
+    $('protocolView').classList.add('hidden');
+    document.body.classList.remove('protocol-open');
+  };
   $('protocolView').classList.remove('hidden');
+  document.body.classList.add('protocol-open');
   $('protocolView').scrollIntoView({ behavior: 'smooth' });
 }
 

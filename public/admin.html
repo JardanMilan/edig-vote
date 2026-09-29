@@ -13,10 +13,23 @@
     .classpick label { display: inline-flex; gap: 6px; align-items: center; font-weight: 500; margin: 0; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
     .classpick input { width: auto; }
     .hash { font-family: ui-monospace, monospace; font-size: 0.8rem; word-break: break-all; }
+    /* Nyomtatás: ha a jegyzőkönyv nyitva van, CSAK az kerül a papírra
+       (a Nyomtatás gombbal és Ctrl+P-vel is). */
     @media print {
-      body.printing main > *:not(#protocolView) { display: none !important; }
-      body.printing #protocolView .noprint { display: none !important; }
-      body.printing .card { border: 0; }
+      :root {
+        --bg: #fff; --card: #fff; --text: #000; --muted: #444; --line: #bbb;
+        --accent: #1f5f8b; --ok: #1e6b3f; --ok-soft: #e4f2e9; --err: #b3261e; --err-soft: #fbe6e4;
+        --warn: #7a4800; --warn-soft: #fbf0dc;
+      }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      body { background: #fff; }
+      main.wide { max-width: none; padding: 0; }
+      body.protocol-open main > *:not(#adminView),
+      body.protocol-open #adminView > *:not(#protocolView) { display: none !important; }
+      body.protocol-open #protocolView { border: 0; padding: 0; margin: 0; }
+      .noprint { display: none !important; }
+      .grid2 { grid-template-columns: 1fr 1fr !important; }
+      @page { size: A4; margin: 15mm; }
     }
   </style>
 </head>

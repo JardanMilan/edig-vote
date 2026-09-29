@@ -1,5 +1,10 @@
 # Változások
 
+## v0.2.1 – 2026-09-29
+
+### Javítva
+- **Jegyzőkönyv nyomtatása:** üres oldal jött ki, mert a nyomtatási szabály a jegyzőkönyvet is elrejtette. Most csak a jegyzőkönyv kerül a papírra (a Nyomtatás gombbal és Ctrl+P-vel is), A4-es margóval, a színes sávokkal, és sötét módban is fehér háttérrel.
+
 ## v0.2.0 – 2026-09-29
 
 ### Javítva
