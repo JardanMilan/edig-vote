@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Diáknapi szavazás</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main>
+  <header class="top">
+    <div>
+      <h1>Diáknapi szavazás</h1>
+      <p class="muted" id="subtitle">Dobó István Gimnázium</p>
+    </div>
+    <button class="secondary hidden" id="logoutBtn">Kilépés</button>
+  </header>
+
+  <div id="msg"></div>
+
+  <!-- 1. Bejelentkezés -->
+  <section class="card hidden" id="loginView">
+    <h2>Belépés</h2>
+    <p>Lépj be az iskolai (<b id="domainLabel">@edig.hu</b>) Google-fiókoddal.</p>
+    <div id="googleBtn"></div>
+    <form id="devForm" class="hidden">
+      <div class="notice warn"><b>Fejlesztői mód:</b> Google nélküli tesztbelépés.</div>
+      <label for="devEmail">Teszt emailcím</label>
+      <input id="devEmail" type="email" placeholder="diak1@edig.hu" required>
+      <p class="muted" style="margin-top:8px">Próbáld pl.: diak1@edig.hu (11.A, szavazhat), diak21@edig.hu (9.B, szavazhat), diak6@edig.hu (11.B, nincs a próbakörben), admin@edig.hu</p>
+      <button type="submit">Belépés</button>
+    </form>
+    <p class="muted" style="margin-top:16px">A rendszer csak azt tárolja, hogy szavaztál-e – azt nem, hogy kire.</p>
+  </section>
+
+  <!-- 2. Nem szavazhat -->
+  <section class="card hidden" id="blockedView">
+    <h2 id="blockedTitle"></h2>
+    <p id="blockedText"></p>
+    <p class="muted" id="whoami"></p>
+  </section>
+
+  <!-- 3. Jelenléti kód -->
+  <section class="card hidden" id="codeView">
+    <h2>Jelenléti kód</h2>
+    <p>Írd be a teremben kivetített 6 jegyű kódot. A kód fél percenként változik.</p>
+    <form id="codeForm">
+      <input id="codeInput" class="code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="\d{6}" required>
+      <div style="height:12px"></div>
+      <button type="submit" style="width:100%">Tovább</button>
+    </form>
+  </section>
+
+  <!-- 4. Szavazólap -->
+  <section class="card hidden" id="ballotView">
+    <div class="row" style="justify-content:space-between">
+      <h2 id="electionName" style="margin:0"></h2>
+      <span class="badge hidden" id="trialBadge">Próbakör</span>
+    </div>
+    <p class="muted" style="margin-top:8px">Egy osztályt választhatsz. A leadott szavazat nem módosítható.</p>
+    <form id="voteForm">
+      <div class="choices" id="choices"></div>
+      <button type="submit" style="width:100%">Szavazat leadása</button>
+    </form>
+  </section>
+
+  <!-- 5. Kész -->
+  <section class="card hidden" id="doneView">
+    <h2>Köszönjük! ✓</h2>
+    <p>A szavazatodat rögzítettük. Az eredmény a szavazás lezárása után derül ki.</p>
+    <p class="muted">A rendszerben csak az szerepel, hogy szavaztál – az nem, hogy kire.</p>
+  </section>
+
+  <dialog id="confirmDlg">
+    <h2>Biztos vagy benne?</h2>
+    <p>Erre szavazol: <b id="confirmChoice"></b></p>
+    <p class="muted">Leadás után nem lehet módosítani.</p>
+    <div class="row" style="justify-content:flex-end">
+      <button class="secondary" value="cancel" id="confirmNo">Mégsem</button>
+      <button id="confirmYes">Igen, leadom</button>
+    </div>
+  </dialog>
+</main>
+<script src="/common.js"></script>
+<script src="/vote.js"></script>
+</body>
+</html>

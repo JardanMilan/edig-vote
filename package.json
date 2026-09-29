@@ -1,0 +1,22 @@
+{
+  "name": "diaknap-szavazas",
+  "version": "0.1.0",
+  "description": "Elektronikus diáknapi szavazás – Dobó István Gimnázium, Eger",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/server.js",
+    "demo": "node scripts/demo.js",
+    "test": "node --test"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "express": "^5.2.1",
+    "google-auth-library": "^11.1.0",
+    "qrcode": "^1.5.4"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=22.9"
+  }
+}

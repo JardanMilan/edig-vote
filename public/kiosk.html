@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jelenléti kód</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .kiosk { text-align: center; padding: 24px 16px; width: 100%; max-width: 1100px; }
+    .layout { display: flex; gap: 48px; align-items: center; justify-content: center; flex-wrap: wrap; }
+    .code { font-size: clamp(3.5rem, 9vw, 9rem); font-weight: 800; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; line-height: 1; }
+    .qr { width: min(300px, 30vw, 80vh); min-width: 180px; background: #fff; padding: 12px; border-radius: 16px; }
+    .qr svg { width: 100%; height: auto; display: block; }
+    .timer { height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 24px auto 8px; max-width: 520px; }
+    .timer > div { height: 100%; background: var(--accent); transition: width 1s linear; }
+    .big-muted { font-size: 1.3rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="kiosk">
+  <div id="keyForm" class="card hidden" style="max-width:420px;margin:0 auto;text-align:left">
+    <h2>Kivetítő</h2>
+    <label for="keyInput">Kivetítő-kulcs</label>
+    <input id="keyInput" type="password">
+    <div style="height:12px"></div>
+    <button id="keyBtn">Megjelenítés</button>
+    <div id="msg"></div>
+  </div>
+
+  <div id="live" class="hidden">
+    <h1 id="title" style="font-size:1.8rem;margin:0"></h1>
+    <p class="big-muted" id="trial"></p>
+    <div class="layout" style="margin-top:24px">
+      <div>
+        <p class="big-muted">Jelenléti kód</p>
+        <div class="code" id="code">······</div>
+        <div class="timer"><div id="bar" style="width:100%"></div></div>
+        <p class="muted" id="left"></p>
+      </div>
+      <div class="qr" id="qr" aria-label="QR-kód a szavazáshoz"></div>
+    </div>
+    <p class="big-muted" style="margin-top:20px">Olvasd be a QR-kódot, vagy nyisd meg a szavazóoldalt, és írd be a kódot.</p>
+  </div>
+
+  <div id="closed" class="hidden">
+    <h1>Most nincs nyitott szavazás</h1>
+    <p class="big-muted">Az oldal magától frissül, amint elindul.</p>
+  </div>
+</div>
+<script src="/common.js"></script>
+<script src="/kiosk.js"></script>
+</body>
+</html>

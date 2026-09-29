@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Szavazás – admin</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+    .el-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+    .classpick { display: flex; flex-wrap: wrap; gap: 6px; }
+    .classpick label { display: inline-flex; gap: 6px; align-items: center; font-weight: 500; margin: 0; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+    .classpick input { width: auto; }
+    .hash { font-family: ui-monospace, monospace; font-size: 0.8rem; word-break: break-all; }
+    @media print {
+      body.printing main > *:not(#protocolView) { display: none !important; }
+      body.printing #protocolView .noprint { display: none !important; }
+      body.printing .card { border: 0; }
+    }
+  </style>
+</head>
+<body>
+<main class="wide">
+  <header class="top">
+    <div>
+      <h1>Szavazás – admin</h1>
+      <p class="muted" id="who"></p>
+    </div>
+    <div class="row">
+      <a class="btn" href="/kiosk" target="_blank" id="kioskLink">Kivetítő megnyitása</a>
+      <button class="secondary hidden" id="logoutBtn">Kilépés</button>
+    </div>
+  </header>
+
+  <div id="msg"></div>
+
+  <section class="card hidden" id="loginView">
+    <h2>Admin belépés</h2>
+    <div id="googleBtn"></div>
+    <form id="devForm" class="hidden">
+      <div class="notice warn"><b>Fejlesztői mód</b></div>
+      <label for="devEmail">Admin emailcím</label>
+      <input id="devEmail" type="email" value="admin@edig.hu" required>
+      <div style="height:12px"></div>
+      <button type="submit">Belépés</button>
+    </form>
+  </section>
+
+  <div id="adminView" class="hidden">
+    <section id="protocolView" class="card hidden"></section>
+
+    <section class="card">
+      <h2>Szavazások</h2>
+      <div id="elections"></div>
+    </section>
+
+    <div class="grid2">
+      <section class="card">
+        <h2>Új szavazás</h2>
+        <form id="newForm">
+          <label for="elName">Megnevezés</label>
+          <input id="elName" placeholder="Diáknap 2026 – próbakör" required>
+          <label class="row" style="font-weight:500"><input type="checkbox" id="elTrial" style="width:auto" checked> Próbakör</label>
+          <label for="elCands">Jelöltek (soronként: azonosító;megjelenő név)</label>
+          <textarea id="elCands" placeholder="11.A;11.A – Vadnyugat&#10;11.B;11.B – Űrutazás&#10;11.C;11.C – Retro 80s"></textarea>
+          <label>Szavazó osztályok <span class="muted">(ha egyet sem jelölsz: mindenki)</span></label>
+          <div class="classpick" id="classPick"></div>
+          <div style="height:16px"></div>
+          <button type="submit">Létrehozás</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Névjegyzék</h2>
+        <table id="classTable"></table>
+        <label for="votersCsv">Csere CSV-ből (email;osztály)</label>
+        <input type="file" id="votersFile" accept=".csv,.txt">
+        <div style="height:8px"></div>
+        <textarea id="votersCsv" placeholder="email;osztaly&#10;kiss.anna@edig.hu;9.A"></textarea>
+        <div style="height:8px"></div>
+        <button id="votersBtn">Névjegyzék cseréje</button>
+        <p class="muted" style="margin-top:8px">Nyitott szavazás alatt nem cserélhető.</p>
+
+        <label for="absentList" style="margin-top:20px">Mai hiányzók (emailcímek)</label>
+        <textarea id="absentList" placeholder="Egy sorba egy cím, vagy vesszővel elválasztva. Üres lista = senki nem hiányzik."></textarea>
+        <div style="height:8px"></div>
+        <button id="absentBtn">Hiányzók mentése</button>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>Admin napló</h2>
+      <p class="muted">Csak admin műveletek. Szavazatokról semmi nem kerül ide.</p>
+      <table id="auditTable"></table>
+    </section>
+  </div>
+</main>
+<script src="/common.js"></script>
+<script src="/admin.js"></script>
+</body>
+</html>
