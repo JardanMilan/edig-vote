@@ -170,7 +170,7 @@ A rendszer támogatja, hogy egy szavazáson csak kijelölt osztályok vegyenek r
 
 ## 10. Üzemeltetés
 
-- **Futtatás:** Node.js 22+, `npm install`, `npm start`. Egy olcsó VPS, az iskola saját szervere, vagy bármilyen Node.js-t futtató tárhely megfelel.
+- **Futtatás:** Node.js 22.13+, `npm install`, `npm start`. Egy olcsó VPS, az iskola saját szervere, vagy bármilyen Node.js-t futtató tárhely megfelel.
 - **HTTPS kötelező** (Google-bejelentkezés és a biztonságos süti miatt) – pl. Caddy vagy nginx + Let's Encrypt.
 - **Terhelés:** 550 diák, még ha egyszerre is szavaznak, néhány száz kérés percenként – ez egy kis szervernek semmi.
 - **Mentés:** a szavazás lezárása után az adatbázisfájl (`data/szavazas.db`) másolata.

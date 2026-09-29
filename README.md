@@ -14,7 +14,7 @@ Elektronikus szavazórendszer a Dobó István Gimnázium (Eger) diáknapjára. K
 
 ## Kipróbálás (Google-fiók nélkül)
 
-Kell hozzá: [Node.js 22](https://nodejs.org/) vagy újabb.
+Kell hozzá: [Node.js](https://nodejs.org/) 22.13 vagy újabb (az LTS verzió jó). Natív fordítás nem kell, Windows-on is azonnal települ.
 
 ```bash
 npm install

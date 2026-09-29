@@ -10,13 +10,12 @@
   },
   "license": "MIT",
   "dependencies": {
-    "better-sqlite3": "^13.0.3",
     "express": "^5.2.1",
     "google-auth-library": "^11.1.0",
     "qrcode": "^1.5.4"
   },
   "private": true,
   "engines": {
-    "node": ">=22.9"
+    "node": ">=22.13"
   }
 }

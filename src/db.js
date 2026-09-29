@@ -1,6 +1,12 @@
 'use strict';
 
-const Database = require('better-sqlite3');
+// A Node.js beépített SQLite-ja: nincs natív fordítás, Windows-on is azonnal települ.
+// Az "ExperimentalWarning" figyelmeztetést elnyomjuk, a modul Node 22.13+ óta stabilan használható.
+const origEmit = process.emitWarning;
+process.emitWarning = (w, ...a) =>
+  (typeof w === 'string' ? w : w && w.message || '').includes('SQLite') ? undefined : origEmit.call(process, w, ...a);
+const { DatabaseSync } = require('node:sqlite');
+process.emitWarning = origEmit;
 const fs = require('fs');
 const path = require('path');
 
@@ -72,12 +78,32 @@ CREATE TABLE IF NOT EXISTS audit_log (
 
 function openDb(dbPath) {
   if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(path.resolve(dbPath)), { recursive: true });
-  const db = new Database(dbPath);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
-  db.pragma('busy_timeout = 5000');
+  const db = new DatabaseSync(dbPath);
+  db.exec('PRAGMA journal_mode = WAL');
+  db.exec('PRAGMA foreign_keys = ON');
+  db.exec('PRAGMA busy_timeout = 5000');
   db.exec(SCHEMA);
+
+  // db.transaction(fn) -> függvény, ami fn-t egyetlen tranzakcióban futtatja.
+  // BEGIN IMMEDIATE: már az elején írási zárat kér, így két szavazás nem keveredhet.
+  // Hiba esetén minden visszagörgetődik.
+  db.transaction = (fn) => (...args) => {
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const result = fn(...args);
+      db.exec('COMMIT');
+      return result;
+    } catch (err) {
+      db.exec('ROLLBACK');
+      throw err;
+    }
+  };
   return db;
 }
 
-module.exports = { openDb };
+// Egyedi kulcs / elsődleges kulcs megsértése (pl. második szavazás ugyanattól a diáktól)
+function isConstraintError(err) {
+  return (err && (err.errcode & 0xff) === 19) || /constraint failed/i.test(String(err && err.message));
+}
+
+module.exports = { openDb, isConstraintError };

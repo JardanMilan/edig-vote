@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const path = require('path');
 const QRCode = require('qrcode');
 const { currentCode, verifyCode } = require('./presence');
+const { isConstraintError } = require('./db');
 const { parseVoters, parseEmailList, normalizeClass } = require('./csv');
 
 const MAX_CODE_FAILS = 5;
@@ -273,7 +274,7 @@ function createApp({ cfg, db, verifyGoogle }) {
     try {
       db.prepare('INSERT INTO voted (election_id, email) VALUES (?, ?)').run(electionId, email);
     } catch (err) {
-      if (String(err.code).startsWith('SQLITE_CONSTRAINT')) {
+      if (isConstraintError(err)) {
         throw new HttpError(409, 'Már leadtad a szavazatodat.', 'already_voted');
       }
       throw err;
@@ -292,7 +293,7 @@ function createApp({ cfg, db, verifyGoogle }) {
       return next(new HttpError(403, 'Előbb írd be a kivetítőn látható kódot.', 'not_present'));
     }
     try {
-      castVote.immediate(el.election.id, email, String(req.body.candidateId || ''));
+      castVote(el.election.id, email, String(req.body.candidateId || ''));
     } catch (e) {
       return next(e);
     }
