@@ -72,6 +72,15 @@ function render() {
       e.requireAttendance
         ? 'Csak azok szavazhatnak, akiket itt jelennek jelölsz. Koppints a névre – azonnal mentődik.'
         : 'Ebben a szavazásban nincs jelenlét-ellenőrzés, de a névsorban látod, ki szavazott már.'),
+    e.requireAttendance && e.status === 'draft'
+      ? el('p', { class: 'notice ok', style: 'margin:12px 0 0' },
+          'A szavazás később indul (a programok után). A jelenlétet már most, reggel rögzítheted. ' +
+          'Szavazás előtt nézd át újra, és vedd ki, aki közben elment.')
+      : null,
+    e.requireAttendance && e.status === 'open'
+      ? el('p', { class: 'notice warn', style: 'margin:12px 0 0' },
+          'A szavazás folyamatban. Ha valaki reggel óta elment, most vedd ki a jelenlévők közül.')
+      : null,
     el('div', { class: 'row', style: 'margin-top:12px' },
       el('a', { class: 'btn', href: '/kiosk', target: '_blank' }, 'Kivetítő megnyitása'))
   );

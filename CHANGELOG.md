@@ -5,7 +5,7 @@
 ### Új
 - **Osztályok és csoportok** az admin felületen: létrehozás, törlés, tagok felvétele / áthelyezése / eltávolítása, CSV-import névvel (`email;csoport;név`, hozzáadás vagy teljes csere).
 - **Osztályfőnökök / csoportfelelősök** hozzárendelése osztályonként (a tanári csoportnál pl. igazgatóhelyettes).
-- **Osztályfőnöki felület** (`/tanar`, telefonon is): csak a saját osztály névsora; reggeli jelenlét jelölőnégyzetekkel, azonnali mentéssel, „Mindenki más jelen” gombbal; szavazás közben látszik, ki szavazott már (kire nem). Admin felületre lépve automatikusan ide kerül.
+- **Osztályfőnöki felület** (`/tanar`, telefonon is): csak a saját osztály névsora; jelenlét már reggel, a szavazás megnyitása előtt is rögzíthető, és szavazás előtt javítható (a szavazás 12–13 körül, a programok után van) jelölőnégyzetekkel, azonnali mentéssel, „Mindenki más jelen” gombbal; szavazás közben látszik, ki szavazott már (kire nem). Admin felületre lépve automatikusan ide kerül.
 - **Jelenlét-ellenőrzés szavazásonként** (alapértelmezésben bekapcsolva): csak az szavazhat, akit az osztályfőnöke jelennek jelölt. Aki már szavazott, nem jelölhető hiányzónak.
 - Ügyelet: keresés névre is, jelenlét javítása az adminnak.
 - Osztályfőnök kulcs nélkül megnyithatja a kivetítőt.
@@ -18,7 +18,7 @@
 - DÖK-döntés: a tanárok egyenlő súllyal, ugyanúgy szavaznak, mint a diákok; a versengő 11. évfolyam és osztályfőnökeik nem szavaznak. A demó is így indul (5 tanárral).
 - A tanárok is szavaznak: külön tanári ülés (igazgató/helyettes nyitja), tanári szavazatok külön nem jelennek meg. Nyitott kérdések: súlyozás, osztályfőnök a saját osztályára.
 - **Kiberbiztonsági terv** (`docs/KIBERBIZTONSAG.md`): támadók és célok, belső hálózati üzemeltetés, támadásonkénti védekezés (kész / tervezett), felügyelet, incidens-terv, ellenőrzések a próbák előtt. CI: `npm audit`, Dependabot.
-- Osztályülés átdolgozva: jelenlét az osztályfőnöki órán kattintással (névsor, nem email), névsor a kivetítőn.
+- Osztályülés átdolgozva: jelenlét reggel az osztályfőnöki órán kattintással (névsor, nem email), szavazás 12–13 körül a programok után, névsor a kivetítőn.
 - **Biztonsági terv** (`docs/BIZTONSAGI-TERV.md`): osztályülés (tanári jóváhagyás, ülésenkénti érvénytelenítés, osztályonként vagy elektronikus, vagy papír) és kettéválasztott hitelesítő + urna vak aláírással (RFC 9474). Kiváltja a figyelemre és bizalomra épülő védekezést.
 - Új cél: a **2027-es diáknap**. Éves ütemterv két próbaszavazással, mérőszámokkal és előre rögzített döntési feltételekkel: `docs/UTEMTERV.md`.
 - Útmutató az informatikatanároknak (átnézés, ismert korlátok, diák red team óra): `docs/INFOTANAROKNAK.md`.

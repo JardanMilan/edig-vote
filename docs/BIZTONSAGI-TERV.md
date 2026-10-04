@@ -10,13 +10,13 @@ A mérce a papír. Papíron is kijátszható a szavazás, ha **több ember össz
 
 ## 2. A két új építőelem
 
-### 2.1. Osztályülés az osztályfőnöki órán
+### 2.1. Osztályülés: jelenlét reggel, szavazás a programok után
 
-A diáknap reggel osztályfőnöki órával kezdődik, ezért a jelenlétet és a szavazást **ugyanabban az órában** intézzük el:
+A diáknap reggel osztályfőnöki órával kezdődik, a szavazás viszont **12–13 óra körül, a programok után** van, hogy a diákok előbb minden programot lássanak. Ezért a jelenlét és a szavazás két lépés:
 
-1. **Belépés.** Az osztályfőnök a terem gépén a saját `@edig.hu` fiókjával belép, és **csak a saját osztályát** látja. A tanár–osztály párosítást az admin előre feltölti.
-2. **Jelenlét: egy kattintás hiányzónként.** A tanár az osztály **névsorát** látja (neveket, nem emailcímeket), alapból mindenki „jelen”. Csak a hiányzókat kell kikattintani. Papíron semmit nem kell gyűjteni, emailcímet senkinek nem kell tudnia: a nevekhez tartozó címeket a rendszer a névjegyzékből már ismeri.
-3. **Ülés indítása.** Innentől **csak a jelennek jelölt diákok** szavazhatnak, csak ebben az ülésben és csak az iskolai hálózatról.
+1. **Reggel – belépés.** Az osztályfőnök telefonon vagy laptopon a saját `@edig.hu` fiókjával belép, és **csak a saját osztályát** látja. A tanár–osztály párosítást az admin előre beállítja. *(Kész, v0.3.)*
+2. **Reggel – jelenlét, egy kattintás hiányzónként.** A tanár az osztály **névsorát** látja (neveket, nem emailcímeket). Kikattintja a hiányzókat, majd egy gombbal mindenki mást jelennek jelöl. Papíron semmit nem kell gyűjteni. A szavazás ekkor még nem indult el, senki nem tud szavazni. *(Kész, v0.3.)*
+3. **12 körül – ellenőrzés és indítás.** A szavazás előtt az osztályfőnök átnézi a listát, és kiveszi, aki közben hazament. Ezután indul a szavazás, és **csak a jelennek jelöltek** szavazhatnak. A jelenlét szavazás közben is javítható, de aki már szavazott, nem jelölhető hiányzónak. *(Kész, v0.3: a jelenlét javítható, a szavazást az admin nyitja meg.)*
 4. **Kivetítés.** A kivetítőn a kód és a QR-kód látszik, alatta **a névsor**: ki szavazott már ✓, ki még nem. Azt, hogy kire szavazott, sehol nem mutatja. Ez a papíros aláírt névsor megfelelője, és a tanár egy pillantással látja, ki van még hátra.
 5. **Zárás.** Ha mindenki végzett, a tanár lezárja és jóváhagyja az ülést. Ha valami nem stimmel, például egy diák szól, hogy „Már szavaztál” üzenetet kapott, pedig nem szavazott, a tanár **érvényteleníti** az ülést. Ilyenkor az osztály szavazatai kimaradnak, és az osztály papíron szavaz újra.
 
