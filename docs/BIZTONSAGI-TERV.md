@@ -10,17 +10,25 @@ A mérce a papír. Papíron is kijátszható a szavazás, ha **több ember össz
 
 ## 2. A két új építőelem
 
-### 2.1. Osztályülés
+### 2.1. Osztályülés az osztályfőnöki órán
 
-A szavazás osztályonként, **ülésekben** zajlik:
+A diáknap reggel osztályfőnöki órával kezdődik, ezért a jelenlétet és a szavazást **ugyanabban az órában** intézzük el:
 
-1. A felügyelő tanár a terem gépén a saját `@edig.hu` fiókjával **megnyitja az osztálya ülését**. A tanárok listáját az admin előre feltölti.
-2. A kivetítőn megjelenő kód **csak ehhez az üléshez** tartozik: csak az osztály diákjai használhatják, csak amíg az ülés nyitva van, és csak az iskolai hálózatról.
-3. A tanár gépén élőben látszik az **„aláírt névsor”**: kik szavaztak már az osztályból. Az nem látszik, hogy kire.
-4. Az ülés végén a tanár **jóváhagyja** az ülést, ha minden név a teremben ülő diáké. Ha olyan név szerepel, aki nincs bent, vagy valaki azt jelzi, hogy helyette szavaztak, a tanár **érvényteleníti** az ülést. Ilyenkor az ülés összes szavazata kimarad, és az osztály papíron szavaz újra.
-5. Egy ülés szavazatai **csak jóváhagyás után** kerülnek a végeredménybe.
+1. **Belépés.** Az osztályfőnök a terem gépén a saját `@edig.hu` fiókjával belép, és **csak a saját osztályát** látja. A tanár–osztály párosítást az admin előre feltölti.
+2. **Jelenlét: egy kattintás hiányzónként.** A tanár az osztály **névsorát** látja (neveket, nem emailcímeket), alapból mindenki „jelen”. Csak a hiányzókat kell kikattintani. Papíron semmit nem kell gyűjteni, emailcímet senkinek nem kell tudnia: a nevekhez tartozó címeket a rendszer a névjegyzékből már ismeri.
+3. **Ülés indítása.** Innentől **csak a jelennek jelölt diákok** szavazhatnak, csak ebben az ülésben és csak az iskolai hálózatról.
+4. **Kivetítés.** A kivetítőn a kód és a QR-kód látszik, alatta **a névsor**: ki szavazott már ✓, ki még nem. Azt, hogy kire szavazott, sehol nem mutatja. Ez a papíros aláírt névsor megfelelője, és a tanár egy pillantással látja, ki van még hátra.
+5. **Zárás.** Ha mindenki végzett, a tanár lezárja és jóváhagyja az ülést. Ha valami nem stimmel, például egy diák szól, hogy „Már szavaztál” üzenetet kapott, pedig nem szavazott, a tanár **érvényteleníti** az ülést. Ilyenkor az osztály szavazatai kimaradnak, és az osztály papíron szavaz újra.
 
-Így egy osztály **vagy teljesen elektronikusan, vagy teljesen papíron** szavaz. A kettő soha nem keveredik, ezért nem lehet dupla szavazat.
+**Miért zárja ki ez a visszaéléseket?**
+- **Otthonról szavazás:** aki nincs bent, azt a tanár hiányzónak jelöli, így nem tud szavazni, még ha valaki át is küldi neki a kódot.
+- **Más osztályból szavazás:** a kód és az ülés csak egy osztályé.
+- **Más nevében szavazás:** a hiányzók nevében nem lehet. Ha egy jelen lévő diák nevében szavaz valaki, a diák a saját telefonján azonnal látja, hogy „Már szavaztál”, és a neve a kivetítőn is pipát kap. Ilyenkor az ülést érvénytelenítik.
+- **A kód szerepe ezek után:** a fő védelem a jelenléti lista. A kód és a QR mégis marad, mert QR-ral gyorsabb a belépés, és plusz akadály annak, aki valaki más jelszavával próbálkozna.
+
+Egy osztály így **vagy teljesen elektronikusan, vagy teljesen papíron** szavaz, a kettő soha nem keveredik.
+
+> A névjegyzékhez ezért a **nevek** is kellenek, nem csak az emailcímek. A Google Admin felhasználói exportja tartalmazza őket (név, email, szervezeti egység), így a rendszergazdának ez nem jelent plusz munkát.
 
 ### 2.2. Kettéválasztott hitelesítő és urna (vak aláírás)
 
@@ -76,7 +84,7 @@ A szavazatok listáját **nem tesszük nyilvánossá**. Ha mindenki láthatná a
 
 | Lépés | Tartalom | Mikor |
 |---|---|---|
-| 1. | **Osztályülés:** tanári fiókok, ülés megnyitása és zárása, élő névsor, jóváhagyás vagy érvénytelenítés, papíros osztályeredmény rögzítése | 2026. december, az 1. próba előtt |
+| 1. | **Osztályülés:** tanári fiókok, reggeli jelenléti lista kattintással, ülés indítása és zárása, névsor a kivetítőn, jóváhagyás vagy érvénytelenítés, papíros osztályeredmény rögzítése | 2026. december, az 1. próba előtt |
 | 2. | **Kettéválasztás:** Hitelesítő és Urna külön szolgáltatásként, vak aláírás a böngészőben és a szerveren, ülésenkénti kulcsok | 2027. január–február, a 2. próba előtt |
 | 3. | **Ellenőrző program** a tanúknak, bővített jegyzőkönyv | a 2. lépéssel együtt |
 | 4. | **Infótanári átnézés** a kriptográfiai részre | a 2. próba előtt |
@@ -85,5 +93,4 @@ Ez a legnagyobb fejlesztés az egész projektben, különösen a 2. lépés. Az 
 
 ### Eldöntendő kérdések
 1. Ki kezeli a Hitelesítőt és ki az Urnát? Két különböző ember kell, egyikük sem lehet érintett diák.
-2. A jelenlétet a tanár szemre ellenőrzi a névsor alapján, vagy a KRÉTA óra eleji jelenléti adatából?
-3. Papíron újraszavazó osztálynál ki számol? Javaslat: a felügyelő tanár és egy DÖK-tag, a lezáráskor a tanúk előtt.
+2. Papíron újraszavazó osztálynál ki számol? Javaslat: a felügyelő tanár és egy DÖK-tag, a lezáráskor a tanúk előtt.

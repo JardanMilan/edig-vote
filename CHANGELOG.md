@@ -1,6 +1,8 @@
 # Változások
 
 ## Dokumentáció – 2026-10-04
+- **Kiberbiztonsági terv** (`docs/KIBERBIZTONSAG.md`): támadók és célok, belső hálózati üzemeltetés, támadásonkénti védekezés (kész / tervezett), felügyelet, incidens-terv, ellenőrzések a próbák előtt. CI: `npm audit`, Dependabot.
+- Osztályülés átdolgozva: jelenlét az osztályfőnöki órán kattintással (névsor, nem email), névsor a kivetítőn.
 - **Biztonsági terv** (`docs/BIZTONSAGI-TERV.md`): osztályülés (tanári jóváhagyás, ülésenkénti érvénytelenítés, osztályonként vagy elektronikus, vagy papír) és kettéválasztott hitelesítő + urna vak aláírással (RFC 9474). Kiváltja a figyelemre és bizalomra épülő védekezést.
 - Új cél: a **2027-es diáknap**. Éves ütemterv két próbaszavazással, mérőszámokkal és előre rögzített döntési feltételekkel: `docs/UTEMTERV.md`.
 - Útmutató az informatikatanároknak (átnézés, ismert korlátok, diák red team óra): `docs/INFOTANAROKNAK.md`.
