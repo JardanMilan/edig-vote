@@ -1,6 +1,7 @@
 # Változások
 
 ## Dokumentáció – 2026-10-04
+- DÖK-döntés: a tanárok egyenlő súllyal, ugyanúgy szavaznak, mint a diákok; a versengő 11. évfolyam és osztályfőnökeik nem szavaznak. A demó is így indul (5 tanárral).
 - A tanárok is szavaznak: külön tanári ülés (igazgató/helyettes nyitja), tanári szavazatok külön nem jelennek meg. Nyitott kérdések: súlyozás, osztályfőnök a saját osztályára.
 - **Kiberbiztonsági terv** (`docs/KIBERBIZTONSAG.md`): támadók és célok, belső hálózati üzemeltetés, támadásonkénti védekezés (kész / tervezett), felügyelet, incidens-terv, ellenőrzések a próbák előtt. CI: `npm audit`, Dependabot.
 - Osztályülés átdolgozva: jelenlét az osztályfőnöki órán kattintással (névsor, nem email), névsor a kivetítőn.

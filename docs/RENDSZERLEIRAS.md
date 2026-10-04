@@ -16,7 +16,7 @@ A cél egy olyan elektronikus rendszer, amely **legalább olyan hiteles, mint a 
 
 | # | Követelmény | Megoldás a rendszerben |
 |---|---|---|
-| K1 | Csak dobós diák és tanár szavazhat | Google-bejelentkezés, a szerver ellenőrzi, hogy a fiók `@edig.hu` Workspace-fiók **és** szerepel a névjegyzékben (a tanárok külön csoportként) |
+| K1 | Csak dobós diák és tanár szavazhat (a versengő 11. évfolyam és osztályfőnökeik nem) | Google-bejelentkezés, a szerver ellenőrzi, hogy a fiók `@edig.hu` Workspace-fiók **és** szerepel a névjegyzékben (a tanárok külön csoportként) |
 | K2 | Csak aki aznap jelen van | Hiányzók listája (admin feltölti), a hiányzó nem szavazhat |
 | K3 | Csak az iskolából | A teremben kivetített, 30 mp-enként változó **jelenléti kód** (+ opcionálisan: csak az iskolai hálózatról) |
 | K4 | Mindenki csak egyszer | Adatbázis-kényszer: egy email egy szavazáson egyszer szerepelhet a „szavazott” listában |
@@ -199,9 +199,9 @@ A cél a **2027-es diáknap**. Addig: infótanári átnézés, tesztkörnyezet, 
 ## 13. Eldöntendő kérdések a DÖK számára
 
 1. **Hol és mikor szavaznak?** Osztályonként tanórán, tanár jelenlétében (ajánlott) / gépteremben / szabadon egy idősávban?
-2. **Szavazhatnak-e a 11.-esek a saját osztályukra?** (A rendszer szavazásonként beállíthatóan mindkettőt tudja.)
+2. ~~Szavazhatnak-e a 11.-esek a saját osztályukra?~~ **Eldöntve:** a versengő 11. évfolyam és az osztályfőnökeik nem szavaznak, minden más diák és tanár igen, egyenlő súllyal.
 3. **Ki vezeti a hiányzók listáját** aznap reggel, és honnan (KRÉTA)?
 4. **Holtverseny** esetén mi a szabály?
 5. **Ki üzemelteti** a szervert a szavazás alatt, és kik a lezárás tanúi?
 6. **Legyen-e IP-szűrés** (csak iskolai wifiről)? Ehhez kell: fix nyilvános IP, és elég erős wifi 550 eszközhöz – ha idősávokra bontjuk, kevesebb egyidejű eszköz.
-7. **A tanárok is szavaznak.** Nyitott: ugyanannyit ér-e a szavazatuk, mint egy diáké; együtt vagy külön számoljuk-e; szavazhat-e egy osztályfőnök a saját osztályára? (Lásd [BIZTONSAGI-TERV.md](BIZTONSAGI-TERV.md), „Tanárok”.)
+7. ~~Tanárok szavazhatnak-e?~~ **Eldöntve:** igen, egy tanár = egy szavazat, ugyanúgy, mint egy diák; a 11. évfolyam osztályfőnökei nem szavaznak.

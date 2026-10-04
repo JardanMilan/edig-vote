@@ -40,12 +40,12 @@ A tanárok is szavaznak. A névjegyzékben külön csoportként szerepelnek (pl.
 
 **Titkosság kis csoportnál.** A tanárok kevesen vannak, és ha a tanári ülésben csak néhányan szavaznak, a tanári részeredményből következtetni lehetne. Ezért a tanári szavazatokat **nem mutatjuk külön**, csak a végeredménybe számítanak bele. Ha egy ülésben kevés a szavazó, akkor egy másik üléssel összevonva kerül az összesítésbe.
 
-**Eldöntendő (DÖK + vezetőség):**
-1. Ugyanannyit ér-e egy tanári szavazat, mint egy diáké? Ha a súlyozás eltér, az Urna csoportonként számol, és a lezáráskor alkalmazza a súlyt.
-2. Szavazhat-e egy osztályfőnök a saját osztályára?
-3. Eddig papíron hogyan szavaztak a tanárok? A legegyszerűbb ezt a szabályt átvenni.
+**Szabályok (DÖK-döntés):**
+- Egy tanári szavazat **ugyanannyit ér**, mint egy diáké, és ugyanúgy szavaznak, mint a diákok.
+- A **versengő 11. évfolyam nem szavaz**, és az **osztályfőnökeik sem**. Minden más diák és tanár szavaz.
+- A saját osztályra szavazás kérdése így nem merül fel.
 
-> A mostani prototípusban ez már kipróbálható: a tanárok `TANÁR` „osztályként” felvehetők a névjegyzékbe, és egy próbakörben szavazhatnak.
+> A mostani prototípusban ez már beállítható: a tanárok `TANÁR` „osztályként” kerülnek a névjegyzékbe (a 11. évfolyam osztályfőnökei nélkül), a szavazásnál pedig a 11. évfolyamon kívül minden osztály és a `TANÁR` csoport van kijelölve. A demó is így indul.
 
 ### 2.2. Kettéválasztott hitelesítő és urna (vak aláírás)
 

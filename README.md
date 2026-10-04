@@ -21,12 +21,12 @@ npm install
 npm run demo
 ```
 
-Ez egy demó adatbázist készít (45 teszt diák, 9 osztály, egy előkészített próbakör), és fejlesztői módban elindítja a szervert a http://localhost:3000 címen.
+Ez egy demó adatbázist készít (45 teszt diák 9 osztályban, 5 tanár, egy előkészített szavazás), és fejlesztői módban elindítja a szervert a http://localhost:3000 címen.
 
 1. **Admin:** http://localhost:3000/admin → belépés `admin@edig.hu` → a próbakör **Megnyitás**
 2. **Kivetítő:** http://localhost:3000/kiosk#demo → itt látszik a jelenléti kód és a QR
 3. **Diák:** http://localhost:3000 (másik böngészőben vagy privát ablakban) → belépés pl. `diak1@edig.hu` → kód → szavazás
-   - `diak1–5` (11.A) és `diak21–25` (9.B) szavazhat, a többi osztály nem része a próbakörnek
+   - a DÖK szabálya szerint a versengő 11. évfolyam nem szavaz: `diak1–15` (11.A–C) nem tud szavazni, `diak16–45` és `tanar1–5@edig.hu` igen
 4. **Admin:** **Lezárás** → jegyzőkönyv (nyomtatás, JSON letöltés), igény szerint **Eredmény a kivetítőre**
 
 A jegyzőkönyv-fájl ellenőrzése: `npm run verify -- jegyzokonyv-1.json <lenyomat>`

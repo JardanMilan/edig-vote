@@ -1,6 +1,7 @@
 'use strict';
 
-// Demó adatok a kipróbáláshoz: 45 teszt diák 9 osztályban + egy előkészített próbakör.
+// Demó adatok a kipróbáláshoz: 45 teszt diák 9 osztályban, 5 tanár, és egy előkészített szavazás
+// a DÖK szabálya szerint: a versengő 11. évfolyam és osztályfőnökeik nem szavaznak, minden más diák és tanár igen.
 // Használat: npm run demo   (a data/demo.db-t hozza létre újra)
 
 const fs = require('fs');
@@ -22,12 +23,19 @@ for (const cls of classes) {
     lines.push(`${email};${cls}`);
   }
 }
+// Tanárok: a 11. évfolyam osztályfőnökei NEM kerülnek a névjegyzékbe (nem szavaznak).
+for (let i = 1; i <= 5; i++) {
+  const email = `tanar${i}@edig.hu`;
+  ins.run(email, 'TANÁR');
+  lines.push(`${email};TANÁR`);
+}
 fs.writeFileSync(path.join(path.dirname(dbPath), 'demo-szavazok.csv'), lines.join('\n') + '\n');
 
 const now = new Date().toISOString();
 const eid = db
   .prepare('INSERT INTO elections (name, is_trial, allowed_classes, created_at) VALUES (?, 1, ?, ?)')
-  .run('Diáknap 2026 – próbakör', JSON.stringify(['11.A', '9.B']), now).lastInsertRowid;
+  .run('Diáknap – próbaszavazás', JSON.stringify(classes.filter((c) => !c.startsWith('11.')).concat('TANÁR')), now)
+  .lastInsertRowid;
 [
   ['11.A', '11.A – Vadnyugat'],
   ['11.B', '11.B – Űrutazás'],
@@ -41,5 +49,6 @@ db.close();
 
 console.log(`Demó adatbázis kész: ${dbPath}
   45 diák: diak1–5 = 11.A, diak6–10 = 11.B, diak11–15 = 11.C, diak16–20 = 9.A, diak21–25 = 9.B, …
-  Előkészített próbakör: csak a 11.A és a 9.B szavazhat.
+  5 tanár: tanar1–5@edig.hu
+  Előkészített szavazás: minden diák és tanár szavaz, kivéve a versengő 11. évfolyamot.
   Admin: admin@edig.hu   Kivetítő-kulcs: demo`);

@@ -9,7 +9,7 @@ const REASONS = {
   no_open_election: ['Most nincs nyitott szavazás', 'Ha a szavazás elindul, frissítsd az oldalt.'],
   not_on_list: ['Nem szerepelsz a névjegyzékben', 'Ha szerinted tévedés, szólj a szavazást felügyelő tanárnak.'],
   absent: ['Ma hiányzóként vagy nyilvántartva', 'Szavazni csak az aznap jelen lévő diákok tudnak. Ha tévedés, szólj a felügyelő tanárnak.'],
-  class_not_in_round: ['Az osztályod ebben a körben nem szavaz', 'Ez egy próbakör, csak a kijelölt osztályok vesznek részt benne.'],
+  class_not_in_round: ['Ebben a szavazásban nem veszel részt', 'Ezen a szavazáson csak a kijelölt osztályok és csoportok szavaznak. A diáknapon a versengő osztályok nem szavaznak.'],
   already_voted: ['Már szavaztál', 'Köszönjük! Egy diák csak egyszer szavazhat.'],
 };
 
