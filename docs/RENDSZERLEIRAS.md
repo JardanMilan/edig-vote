@@ -161,6 +161,8 @@ A rendszer csak akkor hiteles, ha az eljárás is az. Javasolt menet:
 | Közös gépen a következő diák a másik fiókjával szavaz | Szavazás után automatikus kiléptetés, Google automatikus belépés kikapcsolása, figyelmeztetés | A Google-fiókból a diáknak magának kell kilépnie – felügyelő tanár figyeljen rá |
 | Tömeges belépési / kódkísérlet | Diákonkénti próbálkozás-korlát a kódra | IP alapú korlát szándékosan nincs: az egész iskola egy IP-címről jön, az a jogos diákokat zárná ki |
 
+> **Továbbfejlesztés:** a fenti „maradék kockázatok” közül a kód továbbküldését, a más nevében szavazást, az üzemeltetői összekötést és a leállás miatti keveredést szerkezeti megoldás zárja ki: osztályülés + kettéválasztott hitelesítő és urna vak aláírással. Részletek: [BIZTONSAGI-TERV.md](BIZTONSAGI-TERV.md).
+
 **Az üzemeltető kérdése.** Minden elektronikus szavazásnál kulcskérdés, hogy aki a szervert üzemelteti, elvileg hozzáférhet az adatbázishoz. Ezért javasolt:
 - a szervert **ne egy érintett diák** kezelje a szavazás alatt – ideálisan a rendszergazda vagy egy tanár kezében legyen a hozzáférés;
 - az éles verzió egy **nyilvános, megjelölt kódverzióból** fusson (GitHub release), így ellenőrizhető, mi fut;

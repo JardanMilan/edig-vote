@@ -56,6 +56,8 @@ A lépéseket a README írja le (`/admin` → Megnyitás, `/kiosk#demo`, majd di
 | Az ügyeletes admin látja, **hogy** valaki szavazott-e | Szándékos: ez a papíros aláírt névsor megfelelője. Azt, hogy **kire**, nem látja |
 | A szerver egy példányban fut, egy SQLite-fájllal | 550 főhöz bőven elég; vízszintes skálázásra nincs szükség |
 
+A korlátok első háromra már van terv: osztályülés + kettéválasztott hitelesítő és urna vak aláírással ([BIZTONSAGI-TERV.md](BIZTONSAGI-TERV.md)). **Erre a tervre különösen kíváncsi vagyok, mielőtt megírom.**
+
 ## 5. Mit kérnék?
 
 Amire az idő engedi. Akár csak egy pont is sokat segít:

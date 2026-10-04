@@ -13,9 +13,9 @@
 | **2026. október** | Infótanárok bevonása: bemutató, kódátnézés megkezdése ([INFOTANAROKNAK.md](INFOTANAROKNAK.md)) | Milán, infótanárok | Átnézési jegyzet, javítandók listája |
 | **2026. november** | Rendszergazda: tesztkörnyezet, Google-alkalmazás engedélyezése ([RENDSZERGAZDA.md](RENDSZERGAZDA.md)) | rendszergazda, Milán | Működő teszt-szerver `@edig.hu` belépéssel |
 | **2026. november–december** | Vezetőségi bemutató: engedély a próbaszavazásokra | DÖK (+ Milán technikai kérdésekre) | Írásos/szóbeli engedély, kijelölt felelősök |
-| **2026. december** | Infótanári javítások beépítése, adatkezelési tájékoztató egyeztetése | Milán, adatvédelmi felelős | v0.3, tájékoztató tervezet |
-| **2027. január–február** | **1. próba:** kicsi, tét nélküli szavazás 1–3 osztállyal, csak elektronikusan | DÖK | 1. mérési jegyzőkönyv |
-| **2027. március–április** | **2. próba:** iskolai szintű, alacsony tétű szavazás, **papír és elektronikus párhuzamosan** | DÖK, osztályfőnökök | 2. mérési jegyzőkönyv, összehasonlítás |
+| **2026. december** | Infótanári javítások, **osztályülés** megvalósítása ([BIZTONSAGI-TERV.md](BIZTONSAGI-TERV.md)), adatkezelési tájékoztató egyeztetése | Milán, adatvédelmi felelős | v0.3, tájékoztató tervezet |
+| **2027. január–február** | **1. próba:** kicsi, tét nélküli szavazás 1–3 osztállyal, osztályülésekkel. Közben: **hitelesítő és urna kettéválasztása** (vak aláírás) | DÖK, Milán | 1. mérési jegyzőkönyv, v0.4 |
+| **2027. március–április** | **2. próba:** iskolai szintű, alacsony tétű szavazás a teljes, kettéválasztott rendszerrel, **papírral párhuzamosan**. Előtte infótanári átnézés a kriptográfiai részre | DÖK, osztályfőnökök, infótanárok | 2. mérési jegyzőkönyv, összehasonlítás |
 | **2027. május** | Értékelés a vezetőséggel, **döntés** a diáknapról (lásd 4. pont) | DÖK, vezetőség | Döntés: elektronikus / párhuzamos / papír |
 | **2027. június** | Szükséges javítások, éles szerver előkészítése | Milán, rendszergazda | Megjelölt kiadás (pl. v1.0) |
 | **2027. szeptember** | Új névjegyzék, rövid „főpróba” 1 osztállyal, eljárásrend véglegesítése | DÖK, rendszergazda | Kész eljárásrend, kinyomtatott tartalék-szavazólapok |
