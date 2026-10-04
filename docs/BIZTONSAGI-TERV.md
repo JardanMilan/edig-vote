@@ -101,7 +101,7 @@ A folyamat a **vak aláírásra** épül (RSA Blind Signatures, szabványa az [R
 
 ## 4. Lezárás és ellenőrzés
 
-A lezáráskor a tanúk egy **ellenőrző programot** futtatnak, ami a mostani `npm run verify` kibővítése. A program:
+A lezáráskor a tanúk egy **ellenőrző programot** futtatnak, ami a mostani jegyzőkönyv-ellenőrző (`python -m szavazas.ellenorzes`) kibővítése. A program:
 - minden szavazaton ellenőrzi a Hitelesítő aláírását és a jegy saját aláírását;
 - ülésenként összeveti a kiadott jegyek számát, a szavazatok számát és a tanár által igazolt létszámot;
 - újraszámolja az eredményt, és hozzáadja a papíron szavazó osztályok eredményét;

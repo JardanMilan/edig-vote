@@ -12,12 +12,12 @@ Webes szavazórendszer a diáknapra. A diák az `@edig.hu` Google-fiókjával l�
 
 | | |
 |---|---|
-| Nyelv, keretrendszer | Node.js 22+, Express 5 |
-| Adatbázis | SQLite (a Node beépített `node:sqlite` modulja), egyetlen fájl |
-| Frontend | sima HTML + JS, nincs build lépés |
-| Függőségek | 3 db: `express`, `google-auth-library`, `qrcode` |
-| Méret | kb. 2000 sor (tesztekkel együtt) |
-| Tesztek | 24 automata teszt, GitHub Actions: Linux + Windows, Node 22 és 24 |
+| Nyelv, keretrendszer | **Python 3.11+**, Flask 3 |
+| Adatbázis | SQLite (a Python beépített `sqlite3` modulja), egyetlen fájl |
+| Frontend | sima HTML + CSS + JS, nincs build lépés |
+| Függőségek | 5 közvetlen: `flask`, `google-auth`, `requests`, `segno` (QR), `waitress` (webszerver); minden verzió rögzítve a `requirements.txt`-ben |
+| Méret | szerver kb. 1600 sor Python (bőven kommentezve), tesztek kb. 600 sor |
+| Tesztek | 32 automata teszt (pytest), GitHub Actions: Linux + Windows, Python 3.11 és 3.13 |
 | Forráskód | https://github.com/JardanMilan/edig-vote |
 
 ## 2. Kipróbálás 5 perc alatt
@@ -25,9 +25,11 @@ Webes szavazórendszer a diáknapra. A diák az `@edig.hu` Google-fiókjával l�
 ```bash
 git clone https://github.com/JardanMilan/edig-vote.git
 cd edig-vote
-npm ci
-npm test        # automata tesztek
-npm run demo    # demó szerver Google nélkül: http://localhost:3000
+python -m venv .venv
+.venv\Scripts\activate          # Linuxon: source .venv/bin/activate
+python -m pip install -r requirements-dev.txt
+python -m pytest                # automata tesztek
+python -m szavazas.demo         # demó szerver Google nélkül: http://localhost:3000
 ```
 
 A lépéseket a README írja le (`/admin` → Megnyitás, `/kiosk#demo`, majd diákként belépés privát ablakban).
@@ -35,15 +37,15 @@ A lépéseket a README írja le (`/admin` → Megnyitás, `/kiosk#demo`, majd di
 ## 3. A lényeg 5 állításban – kérem, ezeket próbálják megcáfolni
 
 1. **Csak jogosult szavazhat.** Google ID token szerveroldali ellenőrzése (aláírás, audience, `hd` = `edig.hu`, igazolt email), utána névjegyzék, hiányzás, próbakör-szűrés.
-   → `src/auth.js`, `eligibility()` az `src/app.js`-ben
+   → `szavazas/auth.py`, `eligibility()` a `szavazas/app.py`-ban
 2. **Mindenki legfeljebb egyszer.** A `voted` tábla elsődleges kulcsa `(election_id, email)`. A „szavazott” jelölés és a számláló növelése egy `BEGIN IMMEDIATE` tranzakció.
-   → `castVote` az `src/app.js`-ben, `db.transaction` az `src/db.js`-ben
+   → `cast_vote()` a `szavazas/app.py`-ban, `transaction()` a `szavazas/db.py`-ban
 3. **Anonim.** Nincs szavazatonkénti sor: a `tally` táblában csak jelöltenkénti számláló van. A `voted` tábla `WITHOUT ROWID`, időbélyeg nélkül. Nincs olyan tábla, amelyben email és jelölt együtt szerepel; ezt teszt is ellenőrzi. A kéréstörzsek nincsenek naplózva.
-   → `src/db.js` (séma), „anonimitás” teszt
+   → `szavazas/db.py` (séma), „anonimitás” teszt
 4. **Csak aki a teremben van.** TOTP-szerű kód: `HMAC-SHA256(secret, election_id, időablak)`. Az aktuális és az előző ablak fogadható el. Diákonként 5 hiba után 5 perc zárolás. QR esetén a beolvasás időpontja aláírt sütiben, egyszer használható.
-   → `src/presence.js`, `/api/presence` és `/api/presence/scan`
+   → `szavazas/jelenlet.py`, `/api/presence` és `/api/presence/scan`
 5. **Az eredmény lezárásig senkinek sem látható**, adminnak sem. Lezáráskor jegyzőkönyv készül SHA-256 lenyomattal, ami letöltés után külön script-tel ellenőrizhető.
-   → `/elections/:id/close`, `scripts/verify-protocol.js`
+   → `admin_election_close()` a `szavazas/app.py`-ban, `szavazas/ellenorzes.py`
 
 ## 4. Ismert korlátok (ezekről tudok)
 
@@ -62,10 +64,10 @@ A korlátok első háromra már van terv: osztályülés + kettéválasztott hit
 
 Amire az idő engedi. Akár csak egy pont is sokat segít:
 
-- [ ] **Kódátnézés:** `src/app.js` (végpontok, jogosultság), `src/presence.js`, `src/db.js`
+- [ ] **Kódátnézés:** `szavazas/app.py` (végpontok, jogosultság), `szavazas/jelenlet.py`, `szavazas/db.py`
 - [ ] **Biztonság:** hitelesítés megkerülése, CSRF, XSS az admin felületen, munkamenet-kezelés, sütik
 - [ ] **Anonimitás:** van-e olyan adat (napló, sorrend, méret, időzítés), amiből utólag kiderülhet, ki mire szavazott?
-- [ ] **Hiányzó teszt:** milyen esetet nem fed le a `test/app.test.js`?
+- [ ] **Hiányzó teszt:** milyen esetet nem fed le a `tests/test_app.py`?
 - [ ] **Eljárás:** a [rendszerleírás](RENDSZERLEIRAS.md) 7. fejezete (hitelesség, lezárás, jegyzőkönyv) életszerű-e?
 
 Visszajelzés: GitHub issue a repóban, vagy szóban / emailben nekem.

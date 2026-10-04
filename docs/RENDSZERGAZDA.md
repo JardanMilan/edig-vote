@@ -58,7 +58,7 @@ Ha az iskolának **fix nyilvános IP-címe** van, azt megadva a szerver csak az 
 
 ## 4. Opcionális: üzemeltetés
 
-Hitelesség szempontjából jobb, ha a szerverhez a szavazás alatt **nem egy érintett diák**, hanem a rendszergazda (vagy egy tanár) fér hozzá. Ha van iskolai szerver, ahol egy Node.js alkalmazás futhat HTTPS mögött, az ideális; ha nincs, Milán felállít egy külső szervert, és a hozzáférést átadja.
+Hitelesség szempontjából jobb, ha a szerverhez a szavazás alatt **nem egy érintett diák**, hanem a rendszergazda (vagy egy tanár) fér hozzá. Ha van iskolai szerver, ahol egy Python alkalmazás futhat HTTPS mögött, az ideális; ha nincs, Milán felállít egy külső szervert, és a hozzáférést átadja.
 
 A próbaszavazásokhoz elég egy egyszerű tesztszerver is (akár Milán által üzemeltetett), az éles diáknapi szavazáshoz viszont már a fenti elv szerint kell az üzemeltetőt kijelölni.
 
