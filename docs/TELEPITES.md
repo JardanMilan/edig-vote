@@ -2,19 +2,19 @@
 
 Egy kis Linux szerver (VPS vagy iskolai gép) Ubuntu/Debian rendszerrel, nyilvános IP-vel és egy domainnel/aldomainnel. 550 diákhoz 1 vCPU és 1 GB RAM bőven elég.
 
-## 1. Node.js és a program
+## 1. Python és a program
 
 ```bash
-# Node.js 22 LTS (NodeSource)
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt-get install -y nodejs git
+# Python 3.11+ (Ubuntu 24.04 / Debian 12 alatt alapból megvan)
+sudo apt-get install -y python3 python3-venv git
 
 # külön felhasználó, a program a /opt/edig-vote mappába
 sudo useradd --system --home /opt/edig-vote --shell /usr/sbin/nologin edigvote
 sudo git clone https://github.com/JardanMilan/edig-vote.git /opt/edig-vote
 cd /opt/edig-vote
 sudo git checkout v0.2.0        # mindig egy megjelölt, nyilvános verzió fusson
-sudo npm ci --omit=dev
+sudo python3 -m venv .venv
+sudo .venv/bin/pip install -r requirements.txt
 sudo mkdir -p data && sudo chown edigvote:edigvote data
 ```
 
@@ -26,7 +26,7 @@ sudo nano .env
 sudo chown root:edigvote .env && sudo chmod 640 .env
 ```
 
-Kötelező kitölteni: `GOOGLE_CLIENT_ID`, `ADMIN_EMAILS`, `APP_SECRET`, `KIOSK_KEY`, valamint `TRUST_PROXY=loopback` (mert Caddy mögött fut). Titkok generálása: `openssl rand -hex 32`.
+Kötelező kitölteni: `GOOGLE_CLIENT_ID`, `ADMIN_EMAILS`, `APP_SECRET`, `KIOSK_KEY`, valamint `TRUST_PROXY=1` (mert Caddy mögött fut; ilyenkor a program csak a 127.0.0.1 címen figyel). Titkok generálása: `openssl rand -hex 32`.
 
 **`DEV_LOGIN` élesben soha ne legyen beállítva.**
 
@@ -68,7 +68,7 @@ A Google OAuth kliensnél az *Authorized JavaScript origins* közé fel kell ven
 ```bash
 cd /opt/edig-vote
 sudo git fetch --tags && sudo git checkout v0.X.Y
-sudo npm ci --omit=dev
+sudo .venv/bin/pip install -r requirements.txt
 sudo systemctl restart edig-vote
 ```
 

@@ -63,7 +63,8 @@ function render() {
     $('groups').innerHTML = '';
     return;
   }
-  card.append(
+  // A DOM append() a null-t "null" szövegként írná ki, ezért a feltételes elemeket kiszűrjük.
+  card.append(...[
     el('div', { class: 'group-head' },
       el('h2', { style: 'margin:0' }, e.name),
       el('span', { class: 'badge ' + (e.status === 'open' ? 'ok' : 'gray') }, STATUS[e.status])
@@ -83,7 +84,7 @@ function render() {
       : null,
     el('div', { class: 'row', style: 'margin-top:12px' },
       el('a', { class: 'btn', href: '/kiosk', target: '_blank' }, 'Kivetítő megnyitása'))
-  );
+  ].filter(Boolean));
 
   const box = $('groups');
   box.innerHTML = '';

@@ -40,7 +40,7 @@ A jelenléti kód ugyanazt a célt szolgálja: csak az tud szavazni, aki a terem
 
 ```mermaid
 flowchart LR
-    D[Diák telefonja / gépe] -- HTTPS --> S[Szavazó szerver<br/>Node.js + SQLite]
+    D[Diák telefonja / gépe] -- HTTPS --> S[Szavazó szerver<br/>Python + SQLite]
     D -- Bejelentkezés --> G[Google<br/>edig.hu Workspace]
     G -- aláírt azonosító token --> D
     K[Kivetítő a teremben<br/>/kiosk] -- kód lekérése --> S
@@ -48,7 +48,7 @@ flowchart LR
     S --- DB[(Adatbázis<br/>1 fájl)]
 ```
 
-- **Szerver:** Node.js (Express), egyetlen folyamat.
+- **Szerver:** Python (Flask, waitress webszerver), egyetlen folyamat.
 - **Adatbázis:** SQLite, egyetlen fájl. 550 szavazóhoz bőven elég, és a mentés egy fájl másolása.
 - **Bejelentkezés:** „Bejelentkezés Google-fiókkal” (OpenID Connect). A szerver csak az email címet és a nevet kapja meg, a diák semmilyen más Google-adatához nem fér hozzá (nincs Drive-, Gmail- stb. hozzáférés).
 - **Három felület:**
@@ -141,7 +141,7 @@ A rendszer csak akkor hiteles, ha az eljárás is az. Javasolt menet:
    - eredmény jelöltenként, holtverseny jelzése
    - részvétel osztályonként
    - a jegyzőkönyv **SHA-256 lenyomata** (ujjlenyomata): ha utólag bárki egyetlen számot is megváltoztatna, a lenyomat nem egyezne
-10. A jegyzőkönyvet kinyomtatják és aláírják; a lenyomat a nyomtatott példányon is szerepel. A jegyzőkönyv JSON-fájlként is letölthető; `npm run verify -- jegyzokonyv-1.json <lenyomat>` bárki gépén ellenőrzi, hogy a fájl egyezik-e az aláírt példánnyal.
+10. A jegyzőkönyvet kinyomtatják és aláírják; a lenyomat a nyomtatott példányon is szerepel. A jegyzőkönyv JSON-fájlként is letölthető; `python -m szavazas.ellenorzes jegyzokonyv-1.json <lenyomat>` bárki gépén ellenőrzi, hogy a fájl egyezik-e az aláírt példánnyal.
 11. Ha a DÖK úgy dönt, az admin egy gombbal **kivetítheti az eredményt** (a `/kiosk` oldalon, oszlopdiagrammal), és le is veheti.
 
 ## 8. Kockázatok és védekezés
@@ -176,7 +176,7 @@ A rendszer támogatja, hogy egy szavazáson csak kijelölt osztályok vegyenek r
 
 ## 10. Üzemeltetés
 
-- **Futtatás:** Node.js 22.13+, `npm install`, `npm start`. Egy olcsó VPS, az iskola saját szervere, vagy bármilyen Node.js-t futtató tárhely megfelel. Lépésről lépésre: [TELEPITES.md](TELEPITES.md) (systemd + Caddy).
+- **Futtatás:** Python 3.11+, `pip install -r requirements.txt`, `python -m szavazas`. Egy kis (akár csak a diáknap idejére bérelt) VPS megfelel; osztott PHP-s webtárhelyen nem fut. Lépésről lépésre: [TELEPITES.md](TELEPITES.md) (systemd + Caddy).
 - **Állapotfigyelés:** `GET /healthz`.
 - **HTTPS kötelező** (Google-bejelentkezés és a biztonságos süti miatt) – pl. Caddy vagy nginx + Let's Encrypt.
 - **Terhelés:** 550 diák, még ha egyszerre is szavaznak, néhány száz kérés percenként – ez egy kis szervernek semmi.

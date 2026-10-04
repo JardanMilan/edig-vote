@@ -60,7 +60,7 @@ A diákok **saját telefonon, mobilneten** szavaznak, mert az iskolai wifi diák
 ### 3.4. Szerver és üzemeltetés
 | Kockázat | Védekezés | |
 |---|---|---|
-| Ismert sebezhetőség egy függőségben | Csak 3 közvetlen függőség, rögzített verziók (lockfile). `npm audit` minden változtatásnál, heti frissítésjelzés (Dependabot) a GitHubon | ✅ |
+| Ismert sebezhetőség egy függőségben | Csak 5 közvetlen függőség, minden verzió rögzítve (`requirements.txt`). `pip-audit` minden változtatásnál, heti frissítésjelzés (Dependabot) a GitHubon | ✅ |
 | Ellopott szerver-hozzáférés | Belépés csak SSH-kulccsal, jelszavas belépés tiltva. Tűzfal: csak a 443-as port nyitott. Automatikus biztonsági frissítések | 🔧 (telepítési útmutatóba) |
 | A szolgáltatás feltörése után a rendszer többi része | Külön, jogosultság nélküli felhasználó. A systemd korlátozza, hogy csak a saját adatmappájába írhat | ✅ |
 | Titkos kulcsok kiszivárgása | Csak a szerveren, a `.env`-ben, jogosultsággal védve. A repóban soha | ✅ |

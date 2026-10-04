@@ -7,7 +7,7 @@ Type=simple
 User=edigvote
 WorkingDirectory=/opt/edig-vote
 EnvironmentFile=/opt/edig-vote/.env
-ExecStart=/usr/bin/node src/server.js
+ExecStart=/opt/edig-vote/.venv/bin/python -m szavazas
 Restart=on-failure
 RestartSec=2
 

@@ -1,5 +1,19 @@
 # Változások
 
+## v0.4.0 – 2026-10-04
+
+### Változott
+- **A szerver Pythonban készült el újra** (Flask + a beépített `sqlite3`), hogy az informatikatanárok a tananyagból ismert nyelven nézhessék át. A működés, az adatmodell és a végpontok változatlanok; a böngészős oldalak (HTML/CSS/JS) ugyanazok.
+  - Ugyanazt az adatbázist használja: a korábbi (v0.1–v0.3) adatbázisok átállás után is megnyithatók.
+  - A jelenléti kód és a jegyzőkönyv lenyomata bitre azonos a Node-verzióéval (teszt ellenőrzi).
+  - Indítás: `python -m szavazas`, demó: `python -m szavazas.demo`, ellenőrző: `python -m szavazas.ellenorzes`, tesztek: `python -m pytest`.
+  - Éles webszerver: waitress (Windows-on és Linuxon is). Minden függőség verziója rögzítve (`requirements.txt`), CI: pip-audit, Dependabot (pip).
+  - `TRUST_PROXY=1` esetén a szerver alapból csak a 127.0.0.1 címen figyel, így a proxy megkerülésével nem hamisítható a kliens IP-je.
+- Tesztek: 32 (pytest), köztük 50 egyidejű szavazás valódi, többszálú szerveren.
+
+### Javítva
+- Osztályfőnöki felület: a szavazás kártyáján egy felesleges „null” felirat jelent meg.
+
 ## v0.3.0 – 2026-10-04
 
 ### Új

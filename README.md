@@ -10,15 +10,17 @@ Elektronikus szavazórendszer a Dobó István Gimnázium (Eger) diáknapjára. K
 
 📄 **[Részletes rendszerleírás](docs/RENDSZERLEIRAS.md)** · 🗓️ **[Ütemterv 2026/27](docs/UTEMTERV.md)** · 🧑‍🏫 **[Infótanároknak](docs/INFOTANAROKNAK.md)** · 🔐 **[Biztonsági terv](docs/BIZTONSAGI-TERV.md)** · 🛡️ **[Kiberbiztonság](docs/KIBERBIZTONSAG.md)** · 🔧 **[Rendszergazdai teendők](docs/RENDSZERGAZDA.md)** · 🚀 **[Telepítés](docs/TELEPITES.md)** · 📝 **[Változások](CHANGELOG.md)**
 
-> **Állapot:** prototípus (v0.3). Cél: a 2027-es diáknap, előtte két próbaszavazás mérésekkel.
+> **Állapot:** prototípus (v0.4). A szerver Pythonban készült, hogy az informatikatanárok át tudják nézni. Cél: a 2027-es diáknap, előtte két próbaszavazás mérésekkel.
 
 ## Kipróbálás (Google-fiók nélkül)
 
-Kell hozzá: [Node.js](https://nodejs.org/) 22.13 vagy újabb (az LTS verzió jó). Natív fordítás nem kell, Windows-on is azonnal települ.
+Kell hozzá: [Python](https://www.python.org/downloads/) 3.11 vagy újabb. Natív fordítás nem kell, Windows-on is azonnal települ.
 
 ```bash
-npm install
-npm run demo
+python -m venv .venv
+# Windows:  .venv\Scripts\activate      Linux/macOS:  source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m szavazas.demo
 ```
 
 Ez egy demó adatbázist készít (9 osztály névvel és osztályfőnökkel, tanári csoport, egy előkészített szavazás jelenlét-ellenőrzéssel), és fejlesztői módban elindítja a szervert a http://localhost:3000 címen.
@@ -39,14 +41,15 @@ Ez egy demó adatbázist készít (9 osztály névvel és osztályfőnökkel, ta
 | **Osztályfőnök / csoportfelelős** | akit az admin egy osztályhoz vagy csoporthoz rendel | csak a saját osztályát: névsor, reggeli jelenlét, ki szavazott már (azt nem, hogy kire) |
 | **Szavazó** | a névjegyzék tagjai (diákok, tanárok) | a saját szavazólapját |
 
-A jegyzőkönyv-fájl ellenőrzése: `npm run verify -- jegyzokonyv-1.json <lenyomat>`
+A jegyzőkönyv-fájl ellenőrzése: `python -m szavazas.ellenorzes jegyzokonyv-1.json <lenyomat>`
 
 > Fejlesztői módban (`DEV_LOGIN=1`) bárki beléphet tetszőleges címmel. **Élesben ez tilos.**
 
 ## Tesztek
 
 ```bash
-npm test
+python -m pip install -r requirements-dev.txt
+python -m pytest
 ```
 
 Többek között: teljes szavazási folyamat, dupla szavazás (50 egyidejű kéréssel is), próbakör-szűrés, hiányzók, jelenléti kód lejárata és zárolása, IP-szűrés, admin jogosultság, és hogy az adatbázisban nincs olyan tábla, ami a szavazót és a szavazatot összekötné.
@@ -54,23 +57,26 @@ Többek között: teljes szavazási folyamat, dupla szavazás (50 egyidejű kér
 ## Éles futtatás
 
 1. `cp .env.example .env`, és kitölteni (Google Client ID, adminok, titkos kulcsok)
-2. `npm install --omit=dev && npm start`
-3. HTTPS mögé tenni (pl. Caddy), és `TRUST_PROXY=loopback` – részletesen: [docs/TELEPITES.md](docs/TELEPITES.md)
+2. `python -m pip install -r requirements.txt` és `python -m szavazas`
+3. HTTPS mögé tenni (pl. Caddy), és `TRUST_PROXY=1` – részletesen: [docs/TELEPITES.md](docs/TELEPITES.md)
 
 ## Felépítés
 
 ```
-src/
-  server.js    indítás
-  app.js       végpontok, jogosultság, szavazás tranzakciója
-  db.js        adatmodell (SQLite)
-  presence.js  jelenléti kód (TOTP-szerű)
-  auth.js      Google-token ellenőrzése
-  csv.js       névjegyzék beolvasása
-public/        szavazóoldal, kivetítő, admin (sima HTML + JS, nincs build)
-scripts/       demó adatok, jegyzőkönyv-ellenőrző
-deploy/        systemd szolgáltatás, Caddy konfiguráció
-test/          automata tesztek
+szavazas/          a szerver (Python)
+  __main__.py      indítás (python -m szavazas)
+  app.py           végpontok, jogosultság, szavazás tranzakciója
+  db.py            adatmodell (SQLite)
+  jelenlet.py      jelenléti kód (TOTP-szerű)
+  auth.py          Google-token ellenőrzése
+  nevjegyzek.py    névjegyzék beolvasása
+  config.py        beállítások (.env)
+  demo.py          demó adatok + indítás
+  ellenorzes.py    jegyzőkönyv-ellenőrző
+public/            szavazóoldal, kivetítő, admin (sima HTML + CSS + JS, nincs build)
+deploy/            systemd szolgáltatás, Caddy konfiguráció
+tests/             automata tesztek
+requirements.txt   függőségek, rögzített verziókkal
 docs/          rendszerleírás, ütemterv, infótanári és rendszergazdai útmutató, telepítés
 ```
 
