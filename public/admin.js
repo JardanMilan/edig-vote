@@ -14,6 +14,7 @@ const STATUS = {
 
 let state = null;
 let refreshTimer = null;
+let authMsgShown = false; // a „nem admin” üzenet látszik – sikeres belépés után eltüntetjük
 
 async function load() {
   try {
@@ -30,11 +31,14 @@ async function load() {
       $('adminView').classList.add('hidden');
       $('loginView').classList.remove('hidden');
       $('logoutBtn').classList.toggle('hidden', e.status === 401);
-      if (e.status === 403) showMsg('Ez a fiók nem admin. Lépj ki, és lépj be egy admin fiókkal.');
+      showMsg(e.status === 403 ? 'Ez a fiók nem admin. Lépj ki, és lépj be egy admin fiókkal.' : '');
+      authMsgShown = e.status === 403;
       return;
     }
     return showMsg(e.message);
   }
+  // Sikeres betöltés: a korábbi hibaüzenet (pl. „nem admin”) már nem érvényes.
+  if (authMsgShown) { showMsg(''); authMsgShown = false; }
   $('loginView').classList.add('hidden');
   $('adminView').classList.remove('hidden');
   $('logoutBtn').classList.remove('hidden');

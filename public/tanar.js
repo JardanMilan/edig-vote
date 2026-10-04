@@ -7,6 +7,7 @@ const STATUS = { draft: 'Előkészítve – még nem indult', open: 'Folyamatban
 let data = null;
 let busy = false;
 let timer = null;
+let authMsgShown = false; // „nincs osztály rendelve” üzenet – sikeres betöltés után eltüntetjük
 
 function el(tag, attrs = {}, ...children) {
   const e = document.createElement(tag);
@@ -27,12 +28,14 @@ async function load() {
     if (e.status === 401) {
       $('mainView').classList.add('hidden');
       $('loginView').classList.remove('hidden');
+      showMsg('');
       return;
     }
     $('logoutBtn').classList.remove('hidden');
     if (e.code === 'not_leader') {
       $('loginView').classList.add('hidden');
       showMsg('Ehhez a fiókhoz nincs osztály vagy csoport rendelve. Ha osztályfőnök vagy, szólj a szavazás adminisztrátorának.', 'warn');
+      authMsgShown = true;
       try {
         const me = await api('/api/me');
         if (me.isAdmin) $('adminLink').classList.remove('hidden');
@@ -41,6 +44,8 @@ async function load() {
     }
     return showMsg(e.message);
   }
+  // Sikeres betöltés: a korábbi hiba- vagy „nincs osztály” üzenet már nem érvényes.
+  if (authMsgShown) { showMsg(''); authMsgShown = false; }
   $('loginView').classList.add('hidden');
   $('mainView').classList.remove('hidden');
   $('logoutBtn').classList.remove('hidden');
