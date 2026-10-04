@@ -30,6 +30,23 @@ Egy osztály így **vagy teljesen elektronikusan, vagy teljesen papíron** szava
 
 > A névjegyzékhez ezért a **nevek** is kellenek, nem csak az emailcímek. A Google Admin felhasználói exportja tartalmazza őket (név, email, szervezeti egység), így a rendszergazdának ez nem jelent plusz munkát.
 
+### 2.1.1. Tanárok
+
+A tanárok is szavaznak. A névjegyzékben külön csoportként szerepelnek (pl. `TANÁR`), és **saját ülésük** van:
+
+- A **tanári ülést** az igazgató vagy egy igazgatóhelyettes nyitja meg, például a tanáriban, kivetítővel vagy a saját gépén, ugyanúgy, mint egy osztályfőnök.
+- A jelenlétet ő jelöli a tanári névsorban, és az ülést ő hagyja jóvá vagy érvényteleníti.
+- Aki osztályfőnöki órát tart, a saját osztálya ülésének lezárása után szavaz a tanári ülésben. A diákok ülésében nem szavaz.
+
+**Titkosság kis csoportnál.** A tanárok kevesen vannak, és ha a tanári ülésben csak néhányan szavaznak, a tanári részeredményből következtetni lehetne. Ezért a tanári szavazatokat **nem mutatjuk külön**, csak a végeredménybe számítanak bele. Ha egy ülésben kevés a szavazó, akkor egy másik üléssel összevonva kerül az összesítésbe.
+
+**Eldöntendő (DÖK + vezetőség):**
+1. Ugyanannyit ér-e egy tanári szavazat, mint egy diáké? Ha a súlyozás eltér, az Urna csoportonként számol, és a lezáráskor alkalmazza a súlyt.
+2. Szavazhat-e egy osztályfőnök a saját osztályára?
+3. Eddig papíron hogyan szavaztak a tanárok? A legegyszerűbb ezt a szabályt átvenni.
+
+> A mostani prototípusban ez már kipróbálható: a tanárok `TANÁR` „osztályként” felvehetők a névjegyzékbe, és egy próbakörben szavazhatnak.
+
 ### 2.2. Kettéválasztott hitelesítő és urna (vak aláírás)
 
 A mostani egy szerver helyett **kettő** lesz, **két különböző kezelővel** (pl. a rendszergazda és egy informatikatanár):

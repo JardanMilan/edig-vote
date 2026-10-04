@@ -1,6 +1,7 @@
 # Változások
 
 ## Dokumentáció – 2026-10-04
+- A tanárok is szavaznak: külön tanári ülés (igazgató/helyettes nyitja), tanári szavazatok külön nem jelennek meg. Nyitott kérdések: súlyozás, osztályfőnök a saját osztályára.
 - **Kiberbiztonsági terv** (`docs/KIBERBIZTONSAG.md`): támadók és célok, belső hálózati üzemeltetés, támadásonkénti védekezés (kész / tervezett), felügyelet, incidens-terv, ellenőrzések a próbák előtt. CI: `npm audit`, Dependabot.
 - Osztályülés átdolgozva: jelenlét az osztályfőnöki órán kattintással (névsor, nem email), névsor a kivetítőn.
 - **Biztonsági terv** (`docs/BIZTONSAGI-TERV.md`): osztályülés (tanári jóváhagyás, ülésenkénti érvénytelenítés, osztályonként vagy elektronikus, vagy papír) és kettéválasztott hitelesítő + urna vak aláírással (RFC 9474). Kiváltja a figyelemre és bizalomra épülő védekezést.

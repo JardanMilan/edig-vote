@@ -16,7 +16,7 @@ A cél egy olyan elektronikus rendszer, amely **legalább olyan hiteles, mint a 
 
 | # | Követelmény | Megoldás a rendszerben |
 |---|---|---|
-| K1 | Csak dobós diák szavazhat | Google-bejelentkezés, a szerver ellenőrzi, hogy a fiók `@edig.hu` Workspace-fiók **és** szerepel a névjegyzékben |
+| K1 | Csak dobós diák és tanár szavazhat | Google-bejelentkezés, a szerver ellenőrzi, hogy a fiók `@edig.hu` Workspace-fiók **és** szerepel a névjegyzékben (a tanárok külön csoportként) |
 | K2 | Csak aki aznap jelen van | Hiányzók listája (admin feltölti), a hiányzó nem szavazhat |
 | K3 | Csak az iskolából | A teremben kivetített, 30 mp-enként változó **jelenléti kód** (+ opcionálisan: csak az iskolai hálózatról) |
 | K4 | Mindenki csak egyszer | Adatbázis-kényszer: egy email egy szavazáson egyszer szerepelhet a „szavazott” listában |
@@ -204,4 +204,4 @@ A cél a **2027-es diáknap**. Addig: infótanári átnézés, tesztkörnyezet, 
 4. **Holtverseny** esetén mi a szabály?
 5. **Ki üzemelteti** a szervert a szavazás alatt, és kik a lezárás tanúi?
 6. **Legyen-e IP-szűrés** (csak iskolai wifiről)? Ehhez kell: fix nyilvános IP, és elég erős wifi 550 eszközhöz – ha idősávokra bontjuk, kevesebb egyidejű eszköz.
-7. Tanárok szavazhatnak-e? (Jelenleg: csak a névjegyzékben szereplők.)
+7. **A tanárok is szavaznak.** Nyitott: ugyanannyit ér-e a szavazatuk, mint egy diáké; együtt vagy külön számoljuk-e; szavazhat-e egy osztályfőnök a saját osztályára? (Lásd [BIZTONSAGI-TERV.md](BIZTONSAGI-TERV.md), „Tanárok”.)
