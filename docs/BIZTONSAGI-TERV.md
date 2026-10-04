@@ -10,6 +10,24 @@ A mérce a papír. Papíron is kijátszható a szavazás, ha **több ember össz
 
 ## 2. A két új építőelem
 
+### 2.0. Eszköz: saját telefon, „Kahoot-szerűen”
+
+**Döntés:** a diákok a **saját telefonjukon** szavaznak, az osztályteremben, a kivetített kód (vagy QR) beírásával. Ez ugyanaz a forma, mint egy tanórai Kahoot-játék. A többi lehetőséget ezért vetettük el:
+
+| | Miért nem |
+|---|---|
+| Szavazófülke a tanári gépen | Lassú, és a takarás nehezen megoldható |
+| Gépterem | Két gépterembe egyszerre egy osztály fér be, 14 osztálynál ez túl sok idő |
+| Iskolai wifi | Diákoknak nem használható (több hálózat, MAC-cím szűrés), ezért **mobilnet** kell |
+
+**Telefontilalom.** A [245/2024. (VIII. 8.) Korm. rendelet](https://njt.hu/jogszabaly/2024-245-20-22) szerint a pedagógus **pedagógiai célból** engedélyezheti az okoseszköz használatát. A célt és az időtartamot a KRÉTA-ban rögzíteni kell. A javasolt eljárás:
+- A szavazás idejére (kb. 12:00–12:20) az osztályfőnök kiadja a telefonokat, és a KRÉTA-ban rögzíti: **cél:** „diáknapi elektronikus szavazás (DÖK, közösségi döntéshozatal)”, **időtartam:** a szavazás ideje. Utána a telefonokat visszaszedi.
+- Hogy ez pedagógiai célnak számít-e, arról **a vezetőség dönt**. Mellette szól, hogy ugyanaz a forma, mint egy tanórai Kahoot, és a diákönkormányzati részvétel a közösségi nevelés része. Ha szükséges, a házirendben is rögzíthető.
+
+**Akinek nincs telefonja,** az egy osztálytársa telefonján szavaz, **a saját fiókjával, privát (inkognitó) lapon**. Így a fiókja nem marad bejelentkezve a másik telefonján. A rendszer szavazás után kilépteti, és erre a belépő oldalon és a végén is figyelmeztet.
+
+**Következmény a hálózatra:** mobilnet miatt a szerver az internetről érhető el, és iskolai IP-címre szűrni sem lehet. Hogy csak az szavazhasson, aki bent van, azt a **jelenléti lista** biztosítja (2.1), nem a hálózat. A kiberbiztonsági következményeket a [KIBERBIZTONSAG.md](KIBERBIZTONSAG.md) 2. pontja írja le.
+
 ### 2.1. Osztályülés: jelenlét reggel, szavazás a programok után
 
 A diáknap reggel osztályfőnöki órával kezdődik, a szavazás viszont **12–13 óra körül, a programok után** van, hogy a diákok előbb minden programot lássanak. Ezért a jelenlét és a szavazás két lépés:
@@ -75,7 +93,7 @@ A folyamat a **vak aláírásra** épül (RSA Blind Signatures, szabványa az [R
 
 | Kockázat | Mi történik az új rendszerben | Ki tudná mégis megtenni? |
 |---|---|---|
-| **A kódot továbbküldik valakinek, aki nincs bent** | A kód csak az osztály saját ülésében, iskolai wifiről érvényes. Aki mégis szavaz, a neve megjelenik a tanár névsorában, az ülés érvénytelen lesz, és az osztály papíron szavaz. Az elkövető neve is kiderül. | Senki észrevétlenül |
+| **A kódot továbbküldik valakinek, aki nincs bent** | Aki nincs bent, azt az osztályfőnök hiányzónak jelöli, így a kóddal sem tud szavazni. Aki mégis szavaz, a neve megjelenik a tanár névsorában, az ülés érvénytelen lesz, és az osztály papíron szavaz. Az elkövető neve is kiderül. | Senki észrevétlenül |
 | **Más nevében szavaz valaki** | Hiányzó nevében nem lehet. Jelen lévő diák nevében a név a tanárnál megjelenik, a diák pedig a saját telefonján azt látja, hogy „Már szavaztál”. Az ülés érvénytelen lesz, és az osztály papíron szavaz. | Senki észrevétlenül |
 | **Az üzemeltető összeköti, ki mire szavazott** | A Hitelesítő nem látja a szavazatot, az Urna nem látja a nevet. Az összekötéshez **két különböző kezelőnek** kellene összejátszania, és mindkét szervert titokban módosítania kellene. | Csak két ember összejátszásával, mint papíron |
 | **Az üzemeltető hamis szavazatot tesz az urnába, vagy átír egyet** | Hamis jegyet nem tud készíteni a Hitelesítő aláírása nélkül. Átírni sem tud, mert minden szavazat a jegy saját kulcsával alá van írva. Ha szavazatot töröl, ülésenként nem egyezik a jegyek és a szavazatok száma. | Senki észrevétlenül |

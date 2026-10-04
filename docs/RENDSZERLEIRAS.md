@@ -18,7 +18,7 @@ A cél egy olyan elektronikus rendszer, amely **legalább olyan hiteles, mint a 
 |---|---|---|
 | K1 | Csak dobós diák és tanár szavazhat (a versengő 11. évfolyam és osztályfőnökeik nem) | Google-bejelentkezés, a szerver ellenőrzi, hogy a fiók `@edig.hu` Workspace-fiók **és** szerepel a névjegyzékben (a tanárok külön csoportként) |
 | K2 | Csak aki aznap jelen van | Hiányzók listája (admin feltölti), a hiányzó nem szavazhat |
-| K3 | Csak az iskolából | A teremben kivetített, 30 mp-enként változó **jelenléti kód** (+ opcionálisan: csak az iskolai hálózatról) |
+| K3 | Csak az iskolából | Az osztályfőnök által vezetett **jelenléti lista** + a teremben kivetített, 30 mp-enként változó **jelenléti kód**. (IP-szűrés nem használható, mert a diákok mobilneten szavaznak.) |
 | K4 | Mindenki csak egyszer | Adatbázis-kényszer: egy email egy szavazáson egyszer szerepelhet a „szavazott” listában |
 | K5 | Anonim | A „ki szavazott” és a „mire szavaztak” külön táblában, köztük semmilyen kapcsolat (se idő, se sorszám) |
 | K6 | Hiteles | Eredmény csak lezárás után látható; automatikus egyezés-ellenőrzés; jegyzőkönyv lenyomattal; nyílt forráskód |
@@ -110,7 +110,9 @@ sequenceDiagram
 - 5 hibás próbálkozás után 5 perc zárolás (a találgatás ellen).
 - A kivetítő oldalt egy kulccsal (vagy admin belépéssel) lehet megnyitni.
 
-### Opcionális: csak az iskolai hálózatról
+### Opcionális: csak az iskolai hálózatról (jelenleg nem használható)
+> A diákok mobilneten szavaznak, mert az iskolai wifi diákoknak nem elérhető, ezért ez a lehetőség most nem alkalmazható. Ha a wifi egyszer elérhető lesz, visszakapcsolható.
+
 Ha az iskola internetkapcsolatának fix nyilvános IP-címe van, a szerver beállítható úgy, hogy csak onnan fogadjon szavazatot (`ALLOWED_IPS`). Ekkor a diákoknak az iskolai wifire kell csatlakozniuk. Ez a jelenléti kód mellé **kiegészítő** védelem, mobilnettel pedig nem lehet megkerülni.
 
 ### Ajánlott: felügyelt szavazás
@@ -203,5 +205,5 @@ A cél a **2027-es diáknap**. Addig: infótanári átnézés, tesztkörnyezet, 
 3. **Ki vezeti a hiányzók listáját** aznap reggel, és honnan (KRÉTA)?
 4. **Holtverseny** esetén mi a szabály?
 5. **Ki üzemelteti** a szervert a szavazás alatt, és kik a lezárás tanúi?
-6. **Legyen-e IP-szűrés** (csak iskolai wifiről)? Ehhez kell: fix nyilvános IP, és elég erős wifi 550 eszközhöz – ha idősávokra bontjuk, kevesebb egyidejű eszköz.
+6. ~~Legyen-e IP-szűrés?~~ **Eldöntve:** nem, mert a diákok saját telefonon, mobilneten szavaznak, a tanórai Kahoot mintájára (pedagógiai célú engedéllyel, lásd [BIZTONSAGI-TERV.md](BIZTONSAGI-TERV.md), 2.0).
 7. ~~Tanárok szavazhatnak-e?~~ **Eldöntve:** igen, egy tanár = egy szavazat, ugyanúgy, mint egy diák; a 11. évfolyam osztályfőnökei nem szavaznak.

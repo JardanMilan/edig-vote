@@ -15,17 +15,16 @@ A [biztonsági terv](BIZTONSAGI-TERV.md) arról szól, hogyan nem lehet csalni a
 | Automatikus robotok | Bármilyen ismert sebezhetőség | Minden nyilvános szervert folyamatosan pásztáznak |
 | Ellopott fiók (tanár vagy admin) | Ülés megnyitása, admin műveletek | Adathalászat, kiszivárgott jelszó |
 
-## 2. A legerősebb védelem: kívülről ne lehessen elérni
+## 2. Elérhetőség: a szerver az interneten van – ezért szűkítjük, mikor és kinek
 
-**Javaslat:** a szerver **az iskola belső hálózatán** fusson, és az internet felől **egyáltalán ne legyen elérhető**. Ez lehet egy virtuális gép a rendszergazdánál.
+A diákok **saját telefonon, mobilneten** szavaznak, mert az iskolai wifi diákoknak nem használható (lásd [BIZTONSAGI-TERV.md](BIZTONSAGI-TERV.md), 2.0). Ezért a szerver **az internetről elérhető**, és iskolai IP-címre sem lehet szűrni. A védekezés ezért a következőkre épül:
 
-- A diákok az iskolai wifiről érik el, otthonról semmit nem lehet elérni.
-- Ezzel kiesik a külső támadók és a robotok teljes köre, és a kívülről indított túlterheléses támadás (DDoS) is.
-- A Google-belépés így is működik, mert a diák böngészője közvetlenül a Google-lel beszél. A HTTPS-tanúsítvány is megoldható belső szerverre (DNS-alapú Let's Encrypt).
+- **Időablak:** a diákok számára a szavazás csak a megnyitás és a lezárás között, nagyjából 12 és 13 óra között él. Előtte és utána a szavazó végpontok semmit nem fogadnak el.
+- **Belépés nélkül semmi nem érhető el:** minden érdemi művelethez `@edig.hu` Google-belépés kell. Egy külső támadó csak a nyitóoldalt és a belépési kérést látja.
+- **Túlterhelés ellen:** a szerver egy olyan szolgáltatónál fusson, amelyik alapból véd a DDoS ellen (a nagyobb VPS-szolgáltatók ilyenek). Ha mégis elérhetetlenné válik, a még nem szavazott osztályok papíron szavaznak, és a már leadott szavazatok megmaradnak.
+- **Admin és osztályfőnöki felület:** Google-belépés, kötelező kétlépcsős azonosítás a tanári fiókokon, és minden művelet naplózva van.
 
-**Ha ez nem megoldható,** és a szerver kívül fut (bérelt szerver): a szerver tűzfala a szavazás idejére **csak az iskola nyilvános IP-címéről** fogadjon kapcsolatot. Ez ugyanezt adja, csak egy beállítással több hibalehetőség van.
-
-Ezután a támadó gyakorlatilag csak **iskolai wifin lévő diák** lehet. Ő viszont azonosítható: a wifi naplózza az eszközöket, és be kell jelentkeznie a saját fiókjával.
+> A korábbi javaslat (belső hálózaton futó, kívülről elérhetetlen szerver) erősebb lenne, de mobilnetes szavazással nem működik. Ha egyszer az iskolai wifi diákoknak is elérhető lesz, érdemes visszatérni rá.
 
 ## 3. Támadások és védekezés
 
