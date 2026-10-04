@@ -8,9 +8,9 @@ Elektronikus szavazórendszer a Dobó István Gimnázium (Eger) diáknapjára. K
 - ✅ eredmény csak lezárás után, automatikus ellenőrzéssel és nyomtatható jegyzőkönyvvel
 - ✅ próbakör: szavazásonként kijelölhető, mely osztályok vesznek részt
 
-📄 **[Részletes rendszerleírás](docs/RENDSZERLEIRAS.md)** · 🔧 **[Rendszergazdai teendők](docs/RENDSZERGAZDA.md)** · 🚀 **[Telepítés](docs/TELEPITES.md)** · 📝 **[Változások](CHANGELOG.md)**
+📄 **[Részletes rendszerleírás](docs/RENDSZERLEIRAS.md)** · 🗓️ **[Ütemterv 2026/27](docs/UTEMTERV.md)** · 🧑‍🏫 **[Infótanároknak](docs/INFOTANAROKNAK.md)** · 🔧 **[Rendszergazdai teendők](docs/RENDSZERGAZDA.md)** · 🚀 **[Telepítés](docs/TELEPITES.md)** · 📝 **[Változások](CHANGELOG.md)**
 
-> **Állapot:** prototípus (v0.2.1). Élesítés előtt próbakör szükséges.
+> **Állapot:** prototípus (v0.2.1). Cél: a 2027-es diáknap, előtte két próbaszavazás mérésekkel.
 
 ## Kipróbálás (Google-fiók nélkül)
 
@@ -61,7 +61,7 @@ public/        szavazóoldal, kivetítő, admin (sima HTML + JS, nincs build)
 scripts/       demó adatok, jegyzőkönyv-ellenőrző
 deploy/        systemd szolgáltatás, Caddy konfiguráció
 test/          automata tesztek
-docs/          rendszerleírás, rendszergazdai teendők
+docs/          rendszerleírás, ütemterv, infótanári és rendszergazdai útmutató, telepítés
 ```
 
 ## Licenc

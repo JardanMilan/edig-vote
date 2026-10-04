@@ -1,6 +1,6 @@
 # Rendszerleírás – elektronikus diáknapi szavazás
 
-**Dobó István Gimnázium, Eger** · Tervezet, v0.2 · 2026. szeptember
+**Dobó István Gimnázium, Eger** · Tervezet, v0.2 · 2026. október
 
 Ez a dokumentum leírja, hogyan működik a rendszer, miért így, és mit nem tud (még). Célja, hogy a DÖK, a DÖK-segítő tanár, az igazgatóság és a rendszergazda egy dokumentumból el tudja dönteni, használható-e a rendszer, és milyen feltételekkel.
 
@@ -168,11 +168,7 @@ A rendszer csak akkor hiteles, ha az eljárás is az. Javasolt menet:
 
 ## 9. Próbakör
 
-A rendszer támogatja, hogy egy szavazáson csak kijelölt osztályok vegyenek részt. Javasolt:
-
-1. **Próbakör** 1–2 osztállyal, valódi eszközökön, az iskolai wifin, valódi (de tét nélküli) kérdéssel – pl. „Melyik legyen a diáknap zenéje?”.
-2. Figyeljük: sikerült-e mindenkinek belépni (Google-engedély!), ment-e a kód beírása, mennyi ideig tartott, volt-e hibaüzenet.
-3. Ha minden rendben: éles szavazás. Ha nem: javítás, vagy a diáknapon papír + párhuzamos elektronikus próba.
+A rendszer támogatja, hogy egy szavazáson csak kijelölt osztályok vegyenek részt. A 2026/27-es tanévben két próbaszavazás lesz: egy kicsi, csak elektronikus, és egy iskolai szintű, papírral párhuzamos. Mit mérünk, és milyen feltételek mellett döntünk az éles használatról: [UTEMTERV.md](UTEMTERV.md).
 
 ## 10. Üzemeltetés
 
@@ -184,7 +180,9 @@ A rendszer támogatja, hogy egy szavazáson csak kijelölt osztályok vegyenek r
 - **Beállítások:** lásd `.env.example`.
 
 ### Tartalékterv
-Ha élesben a rendszer nem elérhető (internet, szerver, Google-bejelentkezés), **papíron szavazunk**, a megszokott módon. A papíros szavazólapokat ezért a diáknapra ki kell nyomtatni. Mivel nincs vegyes szavazás (vagy teljesen papír, vagy teljesen elektronikus), nem kell két rendszer eredményét összefésülni.
+Ha élesben a rendszer nem elérhető (internet, szerver, Google-bejelentkezés), **papíron szavazunk**, a megszokott módon. A papíros szavazólapokat ezért a diáknapra ki kell nyomtatni.
+
+Egy szavazáson belül **mindig egyetlen hivatalos csatorna** van: vagy a papír, vagy az elektronikus. Ha menet közben kell váltani, a teljes szavazás megismétlődik papíron, és a két rendszer eredményét **nem fésüljük össze** (különben valaki mindkettőn szavazhatna). A próbaszavazásokon használt párhuzamos módban is a papír a hivatalos, az elektronikus csak mérés.
 
 ## 11. Adatkezelés (GDPR)
 
@@ -192,19 +190,9 @@ Ha élesben a rendszer nem elérhető (internet, szerver, Google-bejelentkezés)
 - **Adatkezelő:** az iskola. Az adatkezelési tájékoztatót (vagy a meglévő kiegészítését) az igazgatósággal / adatvédelmi felelőssel egyeztetni kell.
 - **Megőrzés:** javaslat – a szavazás után 30 nappal a személyes adatok törlése. Ez az admin felületen egy gombbal megtehető („Személyes adatok törlése”): törli a névjegyzéket, a „ki szavazott” listát és a munkameneteket; a jegyzőkönyv (csak számok) megmarad.
 
-## 12. Ütemterv a diáknapig
+## 12. Ütemterv
 
-| Mikor | Mi | Ki |
-|---|---|---|
-| 1. nap | Rendszerleírás + prototípus bemutatása a DÖK-segítő tanárnak | Milán |
-| 1–2. nap | Rendszergazda: Google-alkalmazás engedélyezése, névjegyzék-export (lásd `RENDSZERGAZDA.md`) – **a Google-engedély akár 24 óra alatt lép életbe** | rendszergazda |
-| 2. nap | DÖK és igazgató jóváhagyása, nyitott kérdések eldöntése | DÖK |
-| 2–3. nap | Szerver, domain, HTTPS beállítása | Milán + rendszergazda |
-| 4–5. nap | Próbakör 1–2 osztállyal | DÖK |
-| 5–6. nap | Javítások, eljárásrend és tartalékterv véglegesítése, papír szavazólapok | DÖK |
-| Diáknap | Éles szavazás | mindenki |
-
-Ha a Google-engedély vagy a jóváhagyás csúszik, a reális alternatíva: a diáknapon **papíron** szavazunk, és ezzel párhuzamosan 1–2 osztály elektronikusan is – ez egy valódi, éles próba, jövőre pedig teljesen elektronikus lehet.
+A cél a **2027-es diáknap**. Addig: infótanári átnézés, tesztkörnyezet, vezetőségi engedély, két próbaszavazás mérésekkel, majd májusban döntés előre rögzített feltételek alapján. Részletesen: [UTEMTERV.md](UTEMTERV.md).
 
 ## 13. Eldöntendő kérdések a DÖK számára
 

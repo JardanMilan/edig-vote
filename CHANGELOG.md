@@ -1,5 +1,10 @@
 # Változások
 
+## Dokumentáció – 2026-10-04
+- Új cél: a **2027-es diáknap**. Éves ütemterv két próbaszavazással, mérőszámokkal és előre rögzített döntési feltételekkel: `docs/UTEMTERV.md`.
+- Útmutató az informatikatanároknak (átnézés, ismert korlátok, diák red team óra): `docs/INFOTANAROKNAK.md`.
+- Rendszergazdai teendők időzítve; rendszerleírás: tartalékterv pontosítva (egy szavazáson mindig egy hivatalos csatorna).
+
 ## v0.2.1 – 2026-09-29
 
 ### Javítva

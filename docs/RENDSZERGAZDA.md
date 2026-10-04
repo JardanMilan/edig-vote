@@ -1,6 +1,18 @@
 # Rendszergazdai teendők
 
-Rövid lista – a cél, hogy ez a lehető legkevesebb munka legyen. Összesen kb. 15–30 perc.
+Rövid lista – a cél, hogy ez a lehető legkevesebb munka legyen. **Sürgős nincs benne:** a cél a 2027-es diáknap, addig két próbaszavazás lesz ([UTEMTERV.md](UTEMTERV.md)).
+
+## Mikor mi kell?
+
+| Mikor | Mi | Becsült idő |
+|---|---|---|
+| 2026. november | Google-bejelentkezés engedélyezése (1. pont) | 15–30 perc |
+| 2026. november | Döntés: hol fut a tesztszerver (4. pont) | egy beszélgetés |
+| Minden próba előtt | Friss névjegyzék-export (2. pont) | 5 perc |
+| A próbák napján | Elérhetőség telefonon, ha a wifi vagy a Google-belépés gondot okoz | – |
+| 2027. szeptember | Az éles szavazás előtti névjegyzék, végleges szerver | 30 perc |
+
+A szerver telepítését, frissítését és a hibakeresést Milán végzi; ehhez lépésről lépésre leírás is van: [TELEPITES.md](TELEPITES.md).
 
 ## 1. Google-bejelentkezés engedélyezése (kötelező)
 
@@ -44,6 +56,8 @@ Ha az iskolának **fix nyilvános IP-címe** van, azt megadva a szerver csak az 
 ## 4. Opcionális: üzemeltetés
 
 Hitelesség szempontjából jobb, ha a szerverhez a szavazás alatt **nem egy érintett diák**, hanem a rendszergazda (vagy egy tanár) fér hozzá. Ha van iskolai szerver, ahol egy Node.js alkalmazás futhat HTTPS mögött, az ideális; ha nincs, Milán felállít egy külső szervert, és a hozzáférést átadja.
+
+A próbaszavazásokhoz elég egy egyszerű tesztszerver is (akár Milán által üzemeltetett), az éles diáknapi szavazáshoz viszont már a fenti elv szerint kell az üzemeltetőt kijelölni.
 
 ---
 
