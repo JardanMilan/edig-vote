@@ -20,6 +20,13 @@ async function load() {
     state = await api('/api/admin/overview');
   } catch (e) {
     if (e.status === 401 || e.status === 403) {
+      if (e.status === 403) {
+        // Osztályfőnök / csoportfelelős: a saját felületére irányítjuk.
+        try {
+          const me = await api('/api/me');
+          if (me.isLeader) { location.href = '/tanar'; return; }
+        } catch (_) {}
+      }
       $('adminView').classList.add('hidden');
       $('loginView').classList.remove('hidden');
       $('logoutBtn').classList.toggle('hidden', e.status === 401);
@@ -33,7 +40,7 @@ async function load() {
   $('logoutBtn').classList.remove('hidden');
   $('who').textContent = 'Bejelentkezve: ' + state.me;
   renderElections();
-  renderClasses();
+  renderGroups();
   renderAudit();
   // Nyitott szavazásnál 5 mp-enként frissítjük a részvételt.
   clearTimeout(refreshTimer);
@@ -68,6 +75,7 @@ function renderElections() {
             <b>${esc(e.name)}</b>
             <span class="badge ${cls}">${st}</span>
             ${e.isTrial ? '<span class="badge">Próbakör</span>' : ''}
+            ${e.requireAttendance ? '<span class="badge blue">Jelenlét-ellenőrzés</span>' : ''}
             ${e.noSelfVote ? '<span class="badge gray">Saját osztályra nem</span>' : ''}
             ${e.published ? '<span class="badge ok">Kivetítőn</span>' : ''}
           </div>
@@ -75,6 +83,9 @@ function renderElections() {
         </div>
         <p class="muted" style="margin:8px 0 4px">Szavaz: ${esc(who)} · Jelöltek: ${e.candidates.map((c) => esc(c.label)).join(', ')}</p>
         <p class="muted" style="margin:0">Létrehozva ${fmt(e.createdAt)} · Nyitva ${fmt(e.openedAt)} · Zárva ${fmt(e.closedAt)}</p>
+        ${e.requireAttendance && e.status !== 'closed' ? `
+          <p class="muted" style="margin:6px 0 0">Jelennek jelölve: <b>${e.eligibleCount}</b> / ${e.memberTotal} fő
+            ${e.eligibleCount < e.memberTotal ? '· a többieknél az osztályfőnök még nem rögzítette, vagy hiányoznak' : ''}</p>` : ''}
         ${e.status !== 'draft' ? `
           <p style="margin:10px 0 4px">Részvétel: <b>${e.votedCount}</b> / ${e.eligibleCount} jogosult (${pct}%)</p>
           <div style="background:var(--line);border-radius:4px"><div class="bar" style="width:${Math.min(pct, 100)}%"></div></div>
@@ -84,30 +95,128 @@ function renderElections() {
   }).join('');
 }
 
-function renderClasses() {
-  const rows = [...state.classes].sort((a, b) => a.class.localeCompare(b.class, 'hu', { numeric: true }));
+const byName = (a, b) => a.name.localeCompare(b.name, 'hu', { numeric: true });
+
+function renderGroups() {
+  const rows = [...state.groups].sort(byName);
   const total = rows.reduce((s, r) => s + r.total, 0);
-  const absent = rows.reduce((s, r) => s + (r.absent || 0), 0);
-  $('classTable').innerHTML = rows.length
-    ? `<tr><th>Osztály</th><th class="num">Létszám</th><th class="num">Hiányzó</th></tr>` +
-      rows.map((r) => `<tr><td>${esc(r.class)}</td><td class="num">${r.total}</td><td class="num">${r.absent || 0}</td></tr>`).join('') +
-      `<tr><th>Összesen</th><th class="num">${total}</th><th class="num">${absent}</th></tr>`
-    : '<tr><td class="muted">A névjegyzék üres – tölts fel egy CSV-t.</td></tr>';
+  const hasActive = rows.some((r) => r.present !== null);
+  const present = rows.reduce((s, r) => s + (r.present || 0), 0);
+  $('groupTable').innerHTML = rows.length
+    ? `<tr><th>Név</th><th>Típus</th><th>Osztályfőnök / felelős</th><th class="num">Létszám</th>
+         ${hasActive ? '<th class="num">Jelen</th>' : ''}<th></th></tr>` +
+      rows.map((r) => `
+        <tr>
+          <td><b>${esc(r.name)}</b></td>
+          <td>${r.kind === 'osztaly' ? 'osztály' : 'csoport'}</td>
+          <td>${r.leaders.length ? r.leaders.map(esc).join('<br>') : '<span class="badge">nincs megadva</span>'}</td>
+          <td class="num">${r.total}</td>
+          ${hasActive ? `<td class="num">${r.present}</td>` : ''}
+          <td><div class="row">
+            <button class="secondary" data-gact="members" data-name="${esc(r.name)}">Tagok</button>
+            <button class="secondary" data-gact="edit" data-name="${esc(r.name)}">Szerkesztés</button>
+            ${r.total === 0 ? `<button class="secondary" data-gact="delete" data-name="${esc(r.name)}">Törlés</button>` : ''}
+          </div></td>
+        </tr>`).join('') +
+      `<tr><th colspan="3">Összesen</th><th class="num">${total}</th>${hasActive ? `<th class="num">${present}</th>` : ''}<th></th></tr>`
+    : '<tr><td class="muted">Még nincs osztály vagy csoport – importálj egy névjegyzéket, vagy hozz létre egyet lent.</td></tr>';
 
   const pick = $('classPick');
   const checked = new Set([...pick.querySelectorAll('input:checked')].map((i) => i.value));
   pick.innerHTML = rows.map((r) =>
-    `<label><input type="checkbox" value="${esc(r.class)}" ${checked.has(r.class) ? 'checked' : ''}> ${esc(r.class)}</label>`
+    `<label><input type="checkbox" value="${esc(r.name)}" ${checked.has(r.name) ? 'checked' : ''}> ${esc(r.name)}</label>`
   ).join('') || '<span class="muted">Előbb töltsd fel a névjegyzéket.</span>';
 }
+
+function resetGroupForm() {
+  $('groupForm').reset();
+  $('gName').readOnly = false;
+  $('groupSave').textContent = 'Csoport mentése';
+  $('groupCancel').classList.add('hidden');
+}
+
+$('groupTable').onclick = async (ev) => {
+  const b = ev.target.closest('button[data-gact]');
+  if (!b) return;
+  const name = b.dataset.name;
+  const g = state.groups.find((x) => x.name === name);
+  if (b.dataset.gact === 'edit') {
+    $('gName').value = g.name;
+    $('gName').readOnly = true; // átnevezés helyett új csoport + áthelyezés
+    $('gKind').value = g.kind;
+    $('gLeaders').value = g.leaders.join(', ');
+    $('groupSave').textContent = `${g.name} mentése`;
+    $('groupCancel').classList.remove('hidden');
+    $('gLeaders').focus();
+  } else if (b.dataset.gact === 'delete') {
+    if (!confirm(`Törlöd: ${name}?`)) return;
+    try { await del('/api/admin/groups/' + encodeURIComponent(name)); load(); } catch (e) { showMsg(e.message); }
+  } else if (b.dataset.gact === 'members') {
+    openMembers(name);
+  }
+};
+
+$('groupCancel').onclick = resetGroupForm;
+
+$('groupForm').onsubmit = async (ev) => {
+  ev.preventDefault();
+  try {
+    const r = await api('/api/admin/groups', { name: $('gName').value, kind: $('gKind').value, leaders: $('gLeaders').value });
+    showMsg(`${r.name} mentve.`, 'ok');
+    resetGroupForm();
+    load();
+  } catch (e) { showMsg(e.message); }
+};
+
+// ----- Egy csoport tagjai -----
+let memberGroup = null;
+
+async function openMembers(name) {
+  memberGroup = name;
+  try {
+    const r = await api('/api/admin/groups/' + encodeURIComponent(name) + '/members');
+    $('memberTitle').textContent = `${name} – tagok (${r.members.length})`;
+    $('memberTable').innerHTML = r.members.length
+      ? '<tr><th>Név</th><th>Email</th><th></th></tr>' + r.members.map((m) => `
+          <tr><td>${esc(m.name) || '<span class="muted">–</span>'}</td><td>${esc(m.email)}</td>
+          <td><div class="row"><button class="secondary" data-memail="${esc(m.email)}">Eltávolítás</button></div></td></tr>`).join('')
+      : '<tr><td class="muted">Nincs tag.</td></tr>';
+    $('memberView').classList.remove('hidden');
+    $('memberView').scrollIntoView({ behavior: 'smooth' });
+  } catch (e) { showMsg(e.message); }
+}
+
+$('memberClose').onclick = () => { $('memberView').classList.add('hidden'); memberGroup = null; };
+
+$('memberTable').onclick = async (ev) => {
+  const b = ev.target.closest('button[data-memail]');
+  if (!b || !confirm(`Eltávolítod: ${b.dataset.memail}?`)) return;
+  try { await del('/api/admin/members/' + encodeURIComponent(b.dataset.memail)); openMembers(memberGroup); load(); }
+  catch (e) { showMsg(e.message); }
+};
+
+$('memberForm').onsubmit = async (ev) => {
+  ev.preventDefault();
+  try {
+    await api('/api/admin/members', { email: $('mEmail').value, name: $('mName').value, group: memberGroup });
+    $('memberForm').reset();
+    openMembers(memberGroup);
+    load();
+  } catch (e) { showMsg(e.message); }
+};
 
 const ACTIONS = {
   election_created: 'Szavazás létrehozva',
   election_opened: 'Szavazás megnyitva',
   election_closed: 'Szavazás lezárva',
   voters_replaced: 'Névjegyzék cserélve',
-  absent_set: 'Hiányzók beállítva',
-  absent_toggled: 'Hiányzás módosítva',
+  voters_merged: 'Névjegyzék bővítve',
+  group_saved: 'Csoport mentve',
+  group_deleted: 'Csoport törölve',
+  member_saved: 'Tag felvéve / áthelyezve',
+  member_removed: 'Tag eltávolítva',
+  attendance_marked: 'Jelenlét rögzítve (osztályfőnök)',
+  attendance_set: 'Jelenlét javítva (admin)',
   election_deleted: 'Szavazás törölve',
   results_published: 'Eredmény kivetítőre téve',
   results_unpublished: 'Eredmény levéve a kivetítőről',
@@ -213,7 +322,8 @@ $('newForm').onsubmit = async (ev) => {
   const allowedClasses = [...$('classPick').querySelectorAll('input:checked')].map((i) => i.value);
   try {
     await api('/api/admin/elections', {
-      name: $('elName').value, isTrial: $('elTrial').checked, noSelfVote: $('elNoSelf').checked, candidates, allowedClasses,
+      name: $('elName').value, isTrial: $('elTrial').checked, noSelfVote: $('elNoSelf').checked,
+      requireAttendance: $('elAttendance').checked, candidates, allowedClasses,
     });
     showMsg('Szavazás létrehozva. A listában megnyithatod.', 'ok');
     $('newForm').reset();
@@ -228,21 +338,15 @@ $('votersFile').onchange = async () => {
 
 $('votersBtn').onclick = async () => {
   try {
-    const r = await put('/api/admin/voters', { csv: $('votersCsv').value });
-    showMsg(`Névjegyzék betöltve: ${r.count} diák.`, 'ok');
+    const replace = $('votersReplace').checked;
+    if (replace && !confirm('Teljes csere: aki nincs a listában, törlődik a névjegyzékből. Folytatod?')) return;
+    const r = await put('/api/admin/voters', { csv: $('votersCsv').value, mode: replace ? 'replace' : 'merge' });
+    showMsg(`Névjegyzék ${replace ? 'lecserélve' : 'bővítve'}: ${r.count} sor.`, 'ok');
     $('votersCsv').value = '';
     load();
   } catch (e) {
     showMsg(e.message + (e.details ? '\n' + e.details.join('\n') : ''));
   }
-};
-
-$('absentBtn').onclick = async () => {
-  try {
-    const r = await put('/api/admin/absent', { emails: $('absentList').value });
-    showMsg(`Hiányzók: ${r.matched} diák megjelölve` + (r.unknown ? `, ${r.unknown} cím nincs a névjegyzékben.` : '.'), r.unknown ? 'warn' : 'ok');
-    load();
-  } catch (e) { showMsg(e.message); }
 };
 
 // ----- Ügyelet: diák keresése -----
@@ -261,15 +365,18 @@ async function runSearch() {
       $('searchTable').innerHTML = '<tr><td class="muted">Nincs találat a névjegyzékben – ez a diák nem szavazhat. Ha tévedés, a névjegyzéket kell javítani (nyitott szavazás alatt nem lehet).</td></tr>';
       return;
     }
+    const att = (p) => (p === true ? '<span class="badge ok">jelen</span>' : p === false ? '<span class="badge gray">hiányzik</span>' : '<span class="badge">nincs rögzítve</span>');
     $('searchTable').innerHTML =
-      `<tr><th>Email</th><th>Osztály</th><th>Szavazott?</th><th></th></tr>` +
+      `<tr><th>Név</th><th>Email</th><th>Csoport</th><th>Jelenlét</th><th>Szavazott?</th><th></th></tr>` +
       r.voters.map((v) => `
         <tr>
+          <td>${esc(v.name) || '<span class="muted">–</span>'}</td>
           <td>${esc(v.email)}</td>
           <td>${esc(v.class)}</td>
-          <td>${v.voted === null ? '<span class="muted">nincs nyitott szavazás</span>' : v.voted ? '<span class="badge ok">igen</span>' : 'még nem'}</td>
-          <td class="num"><button class="${v.absent ? '' : 'secondary'}" data-email="${esc(v.email)}" data-absent="${v.absent ? 0 : 1}">
-            ${v.absent ? 'Hiányzó → jelen' : 'Jelen → hiányzó'}</button></td>
+          <td>${r.activeElection ? att(v.present) : '<span class="muted">nincs aktív szavazás</span>'}</td>
+          <td>${v.voted === null ? '<span class="muted">–</span>' : v.voted ? '<span class="badge ok">igen</span>' : 'még nem'}</td>
+          <td>${r.activeElection && !v.voted ? `<div class="row"><button class="${v.present ? 'secondary' : ''}" data-email="${esc(v.email)}" data-present="${v.present ? 0 : 1}">
+            ${v.present ? 'Hiányzónak jelöl' : 'Jelennek jelöl'}</button></div>` : ''}</td>
         </tr>`).join('');
   } catch (e) { showMsg(e.message); }
 }
@@ -278,7 +385,7 @@ $('searchTable').onclick = async (ev) => {
   const b = ev.target.closest('button[data-email]');
   if (!b) return;
   try {
-    await put('/api/admin/voters/absent', { email: b.dataset.email, absent: b.dataset.absent === '1' });
+    await put('/api/admin/attendance', { email: b.dataset.email, present: b.dataset.present === '1' });
     runSearch();
     load();
   } catch (e) { showMsg(e.message); }
@@ -286,7 +393,7 @@ $('searchTable').onclick = async (ev) => {
 
 // ----- Adatvédelem -----
 $('purgeBtn').onclick = async () => {
-  const c = prompt('A névjegyzék, a "ki szavazott" lista és a munkamenetek végleg törlődnek. A jegyzőkönyvek megmaradnak.\n\nMegerősítéshez írd be: TÖRLÉS');
+  const c = prompt('A névjegyzék, a jelenléti adatok, a "ki szavazott" lista és a munkamenetek végleg törlődnek. Az osztályok, az osztályfőnökök és a jegyzőkönyvek megmaradnak.\n\nMegerősítéshez írd be: TÖRLÉS');
   if (c === null) return;
   try {
     const r = await api('/api/admin/purge', { confirm: c });

@@ -76,7 +76,8 @@ diak4@edig.hu;9.b
 diak5@edig.hu;9.B
 diak6@edig.hu;12a`;
 
-async function prepareElection(base, { allowedClasses = [], open = true } = {}) {
+// A régi tesztek jelenlét-ellenőrzés nélküli szavazással futnak; a jelenlétet külön tesztek nézik.
+async function prepareElection(base, { allowedClasses = [], open = true, requireAttendance = false } = {}) {
   const admin = client(base);
   await admin.login('admin@edig.hu');
   let r = await admin.put('/api/admin/voters', { csv: VOTERS });
@@ -86,6 +87,7 @@ async function prepareElection(base, { allowedClasses = [], open = true } = {}) 
     isTrial: true,
     candidates: [{ id: '11.A', label: '11.A' }, { id: '11.B', label: '11.B' }],
     allowedClasses,
+    requireAttendance,
   });
   assert.equal(r.status, 200, JSON.stringify(r.data));
   const id = r.data.id;
@@ -106,8 +108,10 @@ async function studentReady(env, id, email) {
 describe('segédfüggvények', () => {
   test('névjegyzék: osztálynév normalizálás, hibás sorok', () => {
     const { voters, errors } = parseVoters('email;osztaly\na@edig.hu;11a\nb@gmail.com;9.B\nc@edig.hu;\na@edig.hu;10.A', 'edig.hu');
-    assert.deepEqual(voters, [{ email: 'a@edig.hu', class: '11.A' }]);
+    assert.deepEqual(voters, [{ email: 'a@edig.hu', class: '11.A', name: '' }]);
     assert.equal(errors.length, 3);
+    const named = parseVoters('t@edig.hu;Tanár;Kovács  Anna', 'edig.hu').voters[0];
+    assert.deepEqual(named, { email: 't@edig.hu', class: 'TANÁR', name: 'Kovács Anna' });
   });
 
   test('jelenléti kód: aktuális és előző ablak jó, régebbi nem', () => {
@@ -215,14 +219,6 @@ describe('jogosultság', () => {
     assert.equal(await reason('idegen@edig.hu'), 'not_on_list');
   });
 
-  test('hiányzó nem szavazhat', async () => {
-    const admin = client(env.base);
-    await admin.login('admin@edig.hu');
-    const r = await admin.put('/api/admin/absent', { emails: 'diak2@edig.hu, nincs@edig.hu' });
-    assert.deepEqual([r.data.matched, r.data.unknown], [1, 1]);
-    assert.equal(await reason('diak2@edig.hu'), 'absent');
-  });
-
   test('csak iskolai domain léphet be', async () => {
     const s = client(env.base);
     assert.equal((await s.login('valaki@gmail.com')).status, 401);
@@ -305,6 +301,126 @@ describe('iskolai hálózat', () => {
   });
 });
 
+describe('csoportok, osztályfőnökök, reggeli jelenlét', () => {
+  let env, admin, id;
+  before(async () => {
+    env = await setup();
+    admin = client(env.base);
+    await admin.login('admin@edig.hu');
+    let r = await admin.put('/api/admin/voters', {
+      csv: `email;csoport;nev
+diak1@edig.hu;11.A;Versenyző Vilma
+diak4@edig.hu;9.B;Kiss Anna
+diak5@edig.hu;9.B;Nagy Bence
+tanar1@edig.hu;TANÁR;Tóth Tímea`,
+    });
+    assert.equal(r.status, 200, JSON.stringify(r.data));
+    assert.equal((await admin.post('/api/admin/groups', { name: '9.B', leaders: ['ofo9b@edig.hu'] })).status, 200);
+    assert.equal((await admin.post('/api/admin/groups', { name: '11.A', leaders: 'ofo11a@edig.hu' })).status, 200);
+    assert.equal((await admin.post('/api/admin/groups', { name: 'TANÁR', leaders: ['ih@edig.hu'] })).status, 200);
+    assert.equal((await admin.post('/api/admin/groups', { name: '9.B', leaders: ['kulsos@gmail.com'] })).status, 400, 'csak iskolai cím');
+    r = await admin.post('/api/admin/elections', {
+      name: 'Diáknap', candidates: [{ id: '11.A', label: '11.A' }, { id: '11.B', label: '11.B' }],
+      allowedClasses: ['9.B', 'TANÁR'],
+    });
+    id = r.data.id;
+    assert.equal((await admin.post(`/api/admin/elections/${id}/open`)).status, 200);
+  });
+  after(() => env.server.close());
+
+  const as = async (email) => {
+    const c = client(env.base);
+    await c.login(email);
+    return c;
+  };
+
+  test('alapértelmezés: jelenlét nélkül nem lehet szavazni', async () => {
+    const o = (await admin.get('/api/admin/overview')).data;
+    assert.equal(o.elections[0].requireAttendance, true);
+    assert.equal(o.elections[0].eligibleCount, 0);
+    assert.equal(o.elections[0].memberTotal, 3);
+    const s = await as('diak4@edig.hu');
+    assert.equal((await s.get('/api/me')).data.reason, 'not_marked');
+    assert.equal((await s.post('/api/presence', { code: currentCode(env.cfg, id).code })).data.code, 'not_marked');
+  });
+
+  test('az osztályfőnök csak a saját osztályát látja, nevekkel', async () => {
+    const t = await as('ofo9b@edig.hu');
+    const o = (await t.get('/api/teacher/overview')).data;
+    assert.deepEqual(o.groups.map((g) => g.name), ['9.B']);
+    assert.deepEqual(o.groups[0].members.map((m) => m.name), ['Kiss Anna', 'Nagy Bence']);
+    assert.equal(o.groups[0].members[0].present, null);
+    assert.equal(o.election.requireAttendance, true);
+    assert.equal((await t.get('/api/admin/overview')).status, 403, 'nem admin');
+    assert.equal((await t.get('/api/me')).data.isLeader, true);
+  });
+
+  test('jelenlét rögzítése után a jelen lévő szavazhat, a hiányzó nem', async () => {
+    const t = await as('ofo9b@edig.hu');
+    const r = await t.put('/api/teacher/attendance', { group: '9.B', present: ['diak4@edig.hu'], absent: ['diak5@edig.hu'] });
+    assert.equal(r.status, 200, JSON.stringify(r.data));
+    assert.equal((await (await as('diak5@edig.hu')).get('/api/me')).data.reason, 'absent');
+    const s = await studentReady(env, id, 'diak4@edig.hu');
+    assert.equal((await s.post('/api/vote', { candidateId: '11.B' })).status, 200);
+    const o = (await t.get('/api/teacher/overview')).data;
+    const anna = o.groups[0].members.find((m) => m.email === 'diak4@edig.hu');
+    assert.deepEqual([anna.present, anna.voted], [true, true]);
+    const again = await t.put('/api/teacher/attendance', { group: '9.B', absent: ['diak4@edig.hu'] });
+    assert.equal(again.status, 409, 'aki szavazott, nem jelölhető hiányzónak');
+  });
+
+  test('más osztályát nem kezelheti, és nem-felelős nem éri el', async () => {
+    const t = await as('ofo9b@edig.hu');
+    assert.equal((await t.put('/api/teacher/attendance', { group: '11.A', present: ['diak1@edig.hu'] })).status, 403);
+    assert.equal((await t.put('/api/teacher/attendance', { group: '9.B', present: ['diak1@edig.hu'] })).status, 403);
+    assert.equal((await t.put('/api/teacher/attendance', { group: '9.B', present: ['tanar1@edig.hu'] })).status, 403);
+    const d = await as('diak4@edig.hu');
+    assert.equal((await d.get('/api/teacher/overview')).data.code, 'not_leader');
+    const o11 = (await (await as('ofo11a@edig.hu')).get('/api/teacher/overview')).data;
+    assert.equal(o11.groups[0].votes, false, 'a 11.A ebben a szavazásban nem szavaz');
+  });
+
+  test('tanári csoport: a felelős (pl. igazgatóhelyettes) jelöli', async () => {
+    const ih = await as('ih@edig.hu');
+    assert.equal((await ih.put('/api/teacher/attendance', { group: 'TANÁR', present: ['tanar1@edig.hu'] })).status, 200);
+    const t1 = await studentReady(env, id, 'tanar1@edig.hu');
+    assert.equal((await t1.post('/api/vote', { candidateId: '11.A' })).status, 200);
+  });
+
+  test('osztályfőnök kulcs nélkül megnyithatja a kivetítőt', async () => {
+    const t = await as('ofo9b@edig.hu');
+    const k = await t.get('/api/kiosk/code');
+    assert.equal(k.data.code, currentCode(env.cfg, id).code);
+    assert.equal((await (await as('diak4@edig.hu')).get('/api/kiosk/code')).status, 403);
+  });
+
+  test('nyitott szavazás alatt a tagság nem módosítható; lezáráskor a jelenlévők a jogosultak', async () => {
+    assert.equal((await admin.post('/api/admin/members', { email: 'uj@edig.hu', group: '9.B', name: 'Új' })).status, 409);
+    assert.equal((await admin.del('/api/admin/members/diak5@edig.hu')).status, 409);
+    assert.equal((await admin.post(`/api/admin/elections/${id}/close`)).status, 200);
+    const p = (await admin.get(`/api/admin/elections/${id}/protocol`)).data.protocol;
+    assert.deepEqual([p.eligibleCount, p.memberTotal, p.votedCount, p.ballotCount], [2, 3, 2, 2]);
+    const t = await as('ofo9b@edig.hu');
+    assert.equal((await t.put('/api/teacher/attendance', { group: '9.B', present: ['diak5@edig.hu'] })).status, 409, 'lezárás után nincs aktív szavazás');
+  });
+
+  test('tagok és csoportok kezelése szavazáson kívül', async () => {
+    assert.equal((await admin.post('/api/admin/members', { email: 'uj@edig.hu', group: '9.B', name: 'Új Ödön' })).status, 200);
+    assert.equal((await admin.post('/api/admin/members', { email: 'uj@edig.hu', group: 'NINCS' })).status, 404);
+    let m = (await admin.get('/api/admin/groups/9.B/members')).data.members;
+    assert.ok(m.some((x) => x.email === 'uj@edig.hu' && x.name === 'Új Ödön'));
+    assert.equal((await admin.del('/api/admin/groups/9.B')).status, 409, 'nem üres');
+    assert.equal((await admin.post('/api/admin/groups', { name: 'DÖK', kind: 'csoport' })).status, 200);
+    assert.equal((await admin.post('/api/admin/members', { email: 'uj@edig.hu', group: 'DÖK' })).status, 200, 'áthelyezés');
+    m = (await admin.get('/api/admin/groups/DÖK/members')).data.members;
+    assert.equal(m[0].name, 'Új Ödön', 'áthelyezéskor a név megmarad');
+    assert.equal((await admin.del('/api/admin/members/uj@edig.hu')).status, 200);
+    assert.equal((await admin.del('/api/admin/groups/DÖK')).status, 200);
+    const g = (await admin.get('/api/admin/overview')).data.groups.find((x) => x.name === '9.B');
+    assert.deepEqual(g.leaders, ['ofo9b@edig.hu']);
+  });
+});
+
 describe('anonimitás – adatbázis-szerkezet', () => {
   test('nincs olyan tábla, amelyben email és jelölt együtt szerepel', async () => {
     const db = openDb(':memory:');
@@ -354,7 +470,8 @@ describe('v0.2: QR-beolvasás, szabályok, admin funkciók', () => {
     const admin = client(env.base);
     await admin.login('admin@edig.hu');
     const r = await admin.post('/api/admin/elections', {
-      name: 'Saját tiltva', noSelfVote: true, candidates: [{ id: '11.A', label: '11.A' }, { id: '11.B', label: '11.B' }],
+      name: 'Saját tiltva', noSelfVote: true, requireAttendance: false,
+      candidates: [{ id: '11.A', label: '11.A' }, { id: '11.B', label: '11.B' }],
     });
     const id = r.data.id;
     assert.equal((await admin.post(`/api/admin/elections/${id}/open`)).status, 200);
@@ -393,16 +510,19 @@ describe('v0.2: QR-beolvasás, szabályok, admin funkciók', () => {
     assert.ok(Array.isArray(k.results.results));
   });
 
-  test('ügyelet: keresés, hiányzás kapcsolása', async () => {
+  test('ügyelet: keresés, jelenlét javítása az aktív szavazásban', async () => {
     const admin = client(env.base);
     await admin.login('admin@edig.hu');
+    assert.equal((await admin.put('/api/admin/attendance', { email: 'diak5@edig.hu', present: true })).status, 409, 'nincs aktív szavazás');
+    const d = await admin.post('/api/admin/elections', { name: 'Ügyelet', candidates: [{ id: '11.A', label: 'A' }, { id: '11.B', label: 'B' }] });
     let r = await admin.get('/api/admin/voters/search?q=diak5');
     assert.equal(r.data.voters.length, 1);
-    assert.equal(r.data.voters[0].absent, false);
-    assert.equal((await admin.put('/api/admin/voters/absent', { email: 'diak5@edig.hu', absent: true })).status, 200);
+    assert.equal(r.data.voters[0].present, null);
+    assert.equal((await admin.put('/api/admin/attendance', { email: 'diak5@edig.hu', present: true })).status, 200);
     r = await admin.get('/api/admin/voters/search?q=diak5');
-    assert.equal(r.data.voters[0].absent, true);
+    assert.equal(r.data.voters[0].present, true);
     assert.equal((await admin.get('/api/admin/voters/search?q=%25')).data.voters.length, 0, 'LIKE-joker escape-elve');
+    assert.equal((await admin.del(`/api/admin/elections/${d.data.id}`)).status, 200);
   });
 
   test('0 jogosulttal nem nyitható; személyes adatok törlése, jegyzőkönyv marad', async () => {

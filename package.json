@@ -1,6 +1,6 @@
 {
   "name": "diaknap-szavazas",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Elektronikus diáknapi szavazás – Dobó István Gimnázium, Eger",
   "main": "src/server.js",
   "scripts": {

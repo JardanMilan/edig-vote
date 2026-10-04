@@ -8,7 +8,8 @@ function show(view) {
 const REASONS = {
   no_open_election: ['Most nincs nyitott szavazás', 'Ha a szavazás elindul, frissítsd az oldalt.'],
   not_on_list: ['Nem szerepelsz a névjegyzékben', 'Ha szerinted tévedés, szólj a szavazást felügyelő tanárnak.'],
-  absent: ['Ma hiányzóként vagy nyilvántartva', 'Szavazni csak az aznap jelen lévő diákok tudnak. Ha tévedés, szólj a felügyelő tanárnak.'],
+  absent: ['Hiányzóként vagy jelölve', 'Szavazni csak az aznap jelen lévők tudnak. Ha tévedés, szólj az osztályfőnöködnek, ő a saját felületén javíthatja.'],
+  not_marked: ['Az osztályfőnököd még nem rögzítette a jelenlétet', 'Szavazni azok tudnak, akiket az osztályfőnök reggel jelennek jelölt. Szólj neki, aztán frissítsd az oldalt.'],
   class_not_in_round: ['Ebben a szavazásban nem veszel részt', 'Ezen a szavazáson csak a kijelölt osztályok és csoportok szavaznak. A diáknapon a versengő osztályok nem szavaznak.'],
   already_voted: ['Már szavaztál', 'Köszönjük! Egy diák csak egyszer szavazhat.'],
 };
@@ -48,9 +49,11 @@ async function refresh() {
     $('blockedText').textContent = text;
     $('whoami').textContent = `Bejelentkezve: ${me.email}` + (me.class ? ` (${me.class})` : '');
     if (me.isAdmin) $('whoami').textContent += ' · adminként a /admin oldalon kezelheted a szavazást.';
+    if (me.isLeader) $('whoami').textContent += ' · osztályfőnökként a /tanar oldalon rögzítheted a jelenlétet.';
     show(me.reason === 'already_voted' ? 'doneView' : 'blockedView');
     // Ha még nem indult el a szavazás, magától frissül.
-    if (me.reason === 'no_open_election') pollTimer = setTimeout(refresh, 10000);
+    // Ha még nem indult a szavazás, vagy az osztályfőnök még nem rögzítette a jelenlétet, magától frissül.
+    if (me.reason === 'no_open_election' || me.reason === 'not_marked') pollTimer = setTimeout(refresh, 10000);
     return;
   }
 

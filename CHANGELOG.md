@@ -1,5 +1,19 @@
 # Változások
 
+## v0.3.0 – 2026-10-04
+
+### Új
+- **Osztályok és csoportok** az admin felületen: létrehozás, törlés, tagok felvétele / áthelyezése / eltávolítása, CSV-import névvel (`email;csoport;név`, hozzáadás vagy teljes csere).
+- **Osztályfőnökök / csoportfelelősök** hozzárendelése osztályonként (a tanári csoportnál pl. igazgatóhelyettes).
+- **Osztályfőnöki felület** (`/tanar`, telefonon is): csak a saját osztály névsora; reggeli jelenlét jelölőnégyzetekkel, azonnali mentéssel, „Mindenki más jelen” gombbal; szavazás közben látszik, ki szavazott már (kire nem). Admin felületre lépve automatikusan ide kerül.
+- **Jelenlét-ellenőrzés szavazásonként** (alapértelmezésben bekapcsolva): csak az szavazhat, akit az osztályfőnöke jelennek jelölt. Aki már szavazott, nem jelölhető hiányzónak.
+- Ügyelet: keresés névre is, jelenlét javítása az adminnak.
+- Osztályfőnök kulcs nélkül megnyithatja a kivetítőt.
+- Jegyzőkönyv: létszám és a jelennek jelöltek száma külön.
+
+### Megszűnt
+- A régi, admin által bemásolt „mai hiányzók” lista (helyette az osztályfőnöki jelenlét).
+
 ## Dokumentáció – 2026-10-04
 - DÖK-döntés: a tanárok egyenlő súllyal, ugyanúgy szavaznak, mint a diákok; a versengő 11. évfolyam és osztályfőnökeik nem szavaznak. A demó is így indul (5 tanárral).
 - A tanárok is szavaznak: külön tanári ülés (igazgató/helyettes nyitja), tanári szavazatok külön nem jelennek meg. Nyitott kérdések: súlyozás, osztályfőnök a saját osztályára.

@@ -1,8 +1,9 @@
 'use strict';
 
 // Egyszerű CSV/lista feldolgozás a névjegyzékhez.
-// Elfogadott formátum soronként: email,osztály   (vesszővel vagy pontosvesszővel)
-// Fejléc sor (pl. "email;osztaly") és üres sorok kimaradnak.
+// Elfogadott formátum soronként: email;csoport;név   (pontosvessző, vessző vagy tab; a név elhagyható)
+// A csoport egy osztály (pl. 9.A) vagy más csoport (pl. TANÁR).
+// Fejléc sor (pl. "email;osztaly;nev") és üres sorok kimaradnak.
 
 function normalizeClass(c) {
   return String(c || '')
@@ -21,7 +22,8 @@ function parseVoters(text, domain) {
     .forEach((raw, i) => {
       const line = raw.trim();
       if (!line) return;
-      const [emailRaw, classRaw] = line.split(/[;,\t]/).map((s) => (s || '').trim());
+      const [emailRaw, classRaw, ...nameParts] = line.split(/[;,\t]/).map((s) => (s || '').trim());
+      const name = nameParts.filter(Boolean).join(' ').replace(/\s+/g, ' ').slice(0, 100);
       const email = (emailRaw || '').toLowerCase();
       if (i === 0 && !email.includes('@')) return; // fejléc
       if (!/^[^@\s]+@[^@\s]+$/.test(email)) return errors.push(`${i + 1}. sor: hibás email (${emailRaw})`);
@@ -30,7 +32,7 @@ function parseVoters(text, domain) {
       if (!cls) return errors.push(`${i + 1}. sor: hiányzik az osztály (${email})`);
       if (seen.has(email)) return errors.push(`${i + 1}. sor: ismétlődő cím (${email})`);
       seen.add(email);
-      voters.push({ email, class: cls });
+      voters.push({ email, class: cls, name });
     });
   return { voters, errors };
 }
@@ -46,4 +48,9 @@ function parseEmailList(text) {
   ];
 }
 
-module.exports = { parseVoters, parseEmailList, normalizeClass };
+// Osztály (pl. "9.A", "12.B") vagy egyéb csoport (pl. "TANÁR")
+function groupKind(name) {
+  return /^\d{1,2}\.\S{1,3}$/.test(name) ? 'osztaly' : 'csoport';
+}
+
+module.exports = { parseVoters, parseEmailList, normalizeClass, groupKind };

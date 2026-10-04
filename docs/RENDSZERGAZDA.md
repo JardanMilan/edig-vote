@@ -39,15 +39,18 @@ A Workspace for Education a 18 év alattinak jelölt diákokat alapból letiltja
 
 ## 2. Névjegyzék (kötelező, egyszeri)
 
-Egy CSV kell a szavazásra jogosult diákokról, két oszloppal:
+Egy CSV kell a diákokról és a tanárokról, három oszloppal (a név az osztályfőnöki jelenléti listához kell):
 
 ```
-email;osztaly
-kiss.anna@edig.hu;9.A
-nagy.bence@edig.hu;11.C
+email;csoport;nev
+kiss.anna@edig.hu;9.A;Kiss Anna
+nagy.bence@edig.hu;11.C;Nagy Bence
+toth.timea@edig.hu;TANÁR;Tóth Tímea
 ```
 
-Ha az osztályok szervezeti egységekként (OU) szerepelnek az Admin Console-ban, elég a **felhasználólista exportja** (*Users → Download users*) – ebből az átalakítást Milán elvégzi. Alternatíva: KRÉTA-export.
+Ha az osztályok szervezeti egységekként (OU) szerepelnek az Admin Console-ban, elég a **felhasználólista exportja** (*Users → Download users*), amiben a név is benne van. Ebből az átalakítást Milán elvégzi. Alternatíva: KRÉTA-export.
+
+Ezen felül kell egy lista arról, **melyik osztálynak ki az osztályfőnöke** (osztály + az osztályfőnök `@edig.hu` címe). Ezt az admin felületen lehet beállítani, nem kell hozzá Admin Console-jogosultság.
 
 ## 3. Opcionális: iskolai hálózat
 

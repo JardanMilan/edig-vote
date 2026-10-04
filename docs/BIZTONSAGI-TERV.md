@@ -101,7 +101,7 @@ A szavazatok listáját **nem tesszük nyilvánossá**. Ha mindenki láthatná a
 
 | Lépés | Tartalom | Mikor |
 |---|---|---|
-| 1. | **Osztályülés:** tanári fiókok, reggeli jelenléti lista kattintással, ülés indítása és zárása, névsor a kivetítőn, jóváhagyás vagy érvénytelenítés, papíros osztályeredmény rögzítése | 2026. december, az 1. próba előtt |
+| 1. | **Osztályülés:** ✅ *kész (v0.3):* osztályok és csoportok, osztályfőnökök hozzárendelése, külön osztályfőnöki felület, reggeli jelenlét jelölőnégyzetekkel, csak a jelennek jelöltek szavazhatnak, a tanár látja, ki szavazott már. *Hátra van:* ülés indítása és zárása osztályonként, névsor a kivetítőn, jóváhagyás vagy érvénytelenítés, papíros osztályeredmény rögzítése | 2026. december, az 1. próba előtt |
 | 2. | **Kettéválasztás:** Hitelesítő és Urna külön szolgáltatásként, vak aláírás a böngészőben és a szerveren, ülésenkénti kulcsok | 2027. január–február, a 2. próba előtt |
 | 3. | **Ellenőrző program** a tanúknak, bővített jegyzőkönyv | a 2. lépéssel együtt |
 | 4. | **Infótanári átnézés** a kriptográfiai részre | a 2. próba előtt |

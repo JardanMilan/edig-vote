@@ -6,7 +6,7 @@ const path = require('path');
 const QRCode = require('qrcode');
 const { currentCode, verifyCode } = require('./presence');
 const { isConstraintError } = require('./db');
-const { parseVoters, parseEmailList, normalizeClass } = require('./csv');
+const { parseVoters, parseEmailList, normalizeClass, groupKind } = require('./csv');
 
 const MAX_CODE_FAILS = 5;
 const CODE_LOCK_MS = 5 * 60 * 1000;
@@ -97,7 +97,23 @@ function createApp({ cfg, db, verifyGoogle }) {
   // ---------- adatbázis-lekérdezések ----------
 
   const q = {
-    voter: db.prepare('SELECT email, class, absent FROM voters WHERE email = ?'),
+    voter: db.prepare('SELECT email, class, name FROM voters WHERE email = ?'),
+    groups: db.prepare('SELECT name, kind FROM groups ORDER BY name'),
+    group: db.prepare('SELECT name, kind FROM groups WHERE name = ?'),
+    groupLeaders: db.prepare('SELECT email FROM group_leaders WHERE group_name = ? ORDER BY email'),
+    leaderGroups: db.prepare('SELECT group_name FROM group_leaders WHERE email = ? ORDER BY group_name'),
+    members: db.prepare('SELECT email, name FROM voters WHERE class = ? ORDER BY name, email'),
+    memberCount: db.prepare('SELECT COUNT(*) n FROM voters WHERE class = ?'),
+    attendanceGet: db.prepare('SELECT present FROM attendance WHERE election_id = ? AND email = ?'),
+    attendanceSet: db.prepare(
+      `INSERT INTO attendance (election_id, email, present, marked_by) VALUES (?, ?, ?, ?)
+       ON CONFLICT (election_id, email) DO UPDATE SET present = excluded.present, marked_by = excluded.marked_by`
+    ),
+    presentCount: db.prepare(
+      `SELECT COUNT(*) n FROM attendance a JOIN voters v ON v.email = a.email
+       WHERE a.election_id = ? AND a.present = 1 AND v.class = ?`
+    ),
+    latestDraft: db.prepare("SELECT * FROM elections WHERE status = 'draft' ORDER BY id DESC LIMIT 1"),
     openElection: db.prepare("SELECT * FROM elections WHERE status = 'open' LIMIT 1"),
     election: db.prepare('SELECT * FROM elections WHERE id = ?'),
     elections: db.prepare('SELECT * FROM elections ORDER BY id DESC'),
@@ -114,9 +130,7 @@ function createApp({ cfg, db, verifyGoogle }) {
       `SELECT v.class, COUNT(*) n FROM voted d JOIN voters v ON v.email = d.email
        WHERE d.election_id = ? GROUP BY v.class ORDER BY v.class`
     ),
-    classCounts: db.prepare(
-      'SELECT class, COUNT(*) total, SUM(absent) absent FROM voters GROUP BY class ORDER BY class'
-    ),
+    classCounts: db.prepare('SELECT class, COUNT(*) total FROM voters GROUP BY class ORDER BY class'),
     sessionGet: db.prepare('SELECT * FROM sessions WHERE token = ? AND expires_at > ?'),
     sessionIns: db.prepare('INSERT INTO sessions (token, email, expires_at) VALUES (?, ?, ?)'),
     sessionDel: db.prepare('DELETE FROM sessions WHERE token = ?'),
@@ -133,13 +147,33 @@ function createApp({ cfg, db, verifyGoogle }) {
     return election.allowed_classes ? JSON.parse(election.allowed_classes) : null;
   }
 
-  function eligibleCount(election) {
+  const groupAllowed = (election, groupName) => {
     const classes = allowedClasses(election);
-    const rows = q.classCounts.all();
-    return rows
-      .filter((r) => !classes || classes.includes(r.class))
-      .reduce((sum, r) => sum + r.total - (r.absent || 0), 0);
+    return !classes || classes.includes(groupName);
+  };
+
+  // A névjegyzékben szereplő, az adott szavazáson részt vevő csoportok tagjainak száma.
+  function memberTotal(election) {
+    return q.classCounts
+      .all()
+      .filter((r) => groupAllowed(election, r.class))
+      .reduce((sum, r) => sum + r.total, 0);
   }
+
+  // Jogosultak száma: jelenlét-ellenőrzésnél csak a jelennek jelöltek, egyébként minden tag.
+  function eligibleCount(election) {
+    if (!election.require_attendance) return memberTotal(election);
+    return q.classCounts
+      .all()
+      .filter((r) => groupAllowed(election, r.class))
+      .reduce((sum, r) => sum + q.presentCount.get(election.id, r.class).n, 0);
+  }
+
+  // A tanári felület melyik szavazásra rögzít jelenlétet: a nyitottra, ha nincs, a legutóbb előkészítettre.
+  const activeElection = () => q.openElection.get() || q.latestDraft.get() || null;
+
+  const isAdmin = (email) => cfg.adminEmails.includes(email);
+  const leaderGroups = (email) => q.leaderGroups.all(email).map((r) => r.group_name);
 
   // Jogosultság eldöntése egy helyen – a /api/me és a szavazás is ezt használja.
   function eligibility(email) {
@@ -147,10 +181,13 @@ function createApp({ cfg, db, verifyGoogle }) {
     const voter = q.voter.get(email);
     if (!election) return { ok: false, reason: 'no_open_election', election: null, voter };
     if (!voter) return { ok: false, reason: 'not_on_list', election, voter };
-    if (voter.absent) return { ok: false, reason: 'absent', election, voter };
-    const classes = allowedClasses(election);
-    if (classes && !classes.includes(voter.class)) return { ok: false, reason: 'class_not_in_round', election, voter };
+    if (!groupAllowed(election, voter.class)) return { ok: false, reason: 'class_not_in_round', election, voter };
     if (q.hasVoted.get(election.id, email)) return { ok: false, reason: 'already_voted', election, voter };
+    if (election.require_attendance) {
+      const a = q.attendanceGet.get(election.id, email);
+      if (!a) return { ok: false, reason: 'not_marked', election, voter };
+      if (!a.present) return { ok: false, reason: 'absent', election, voter };
+    }
     return { ok: true, reason: null, election, voter };
   }
 
@@ -181,9 +218,17 @@ function createApp({ cfg, db, verifyGoogle }) {
   const requireLogin = (req, res, next) =>
     req.session ? next() : next(new HttpError(401, 'Nem vagy bejelentkezve.', 'not_logged_in'));
 
-  const isAdmin = (email) => cfg.adminEmails.includes(email);
   const requireAdmin = (req, res, next) =>
     req.session && isAdmin(req.session.email) ? next() : next(new HttpError(403, 'Nincs admin jogosultságod.'));
+
+  // Osztályfőnök / csoportfelelős: legalább egy csoport felelőse.
+  const requireLeader = (req, res, next) => {
+    if (!req.session) return next(new HttpError(401, 'Nem vagy bejelentkezve.', 'not_logged_in'));
+    req.leaderOf = leaderGroups(req.session.email);
+    return req.leaderOf.length
+      ? next()
+      : next(new HttpError(403, 'Egyetlen osztálynak vagy csoportnak sem vagy a felelőse.', 'not_leader'));
+  };
 
   const requireSchoolNetwork = (req, res, next) =>
     ipAllowed(req.ip, cfg.allowedIps)
@@ -228,6 +273,8 @@ function createApp({ cfg, db, verifyGoogle }) {
     res.json({
       email,
       isAdmin: isAdmin(email),
+      isLeader: leaderGroups(email).length > 0,
+      name: el.voter ? el.voter.name : null,
       class: el.voter ? el.voter.class : null,
       canVote: el.ok,
       reason: el.reason,
@@ -361,7 +408,8 @@ function createApp({ cfg, db, verifyGoogle }) {
       cfg.kioskKey &&
       key.length === cfg.kioskKey.length &&
       crypto.timingSafeEqual(Buffer.from(key), Buffer.from(cfg.kioskKey));
-    const adminOk = req.session && isAdmin(req.session.email);
+    // Adminként vagy osztályfőnökként belépve kulcs nélkül is megnyitható.
+    const adminOk = req.session && (isAdmin(req.session.email) || leaderGroups(req.session.email).length > 0);
     if (!keyOk && !adminOk) return next(new HttpError(403, 'Érvénytelen kivetítő-kulcs.'));
     const election = q.openElection.get();
     if (!election) {
@@ -390,8 +438,21 @@ function createApp({ cfg, db, verifyGoogle }) {
   const admin = express.Router();
   admin.use(requireLogin, requireAdmin);
 
+  // Csoportok áttekintése: létszám, felelősök, és az aktív szavazásra rögzített jelenlét.
+  function groupsSummary() {
+    const active = activeElection();
+    return q.groups.all().map((g) => ({
+      name: g.name,
+      kind: g.kind,
+      leaders: q.groupLeaders.all(g.name).map((r) => r.email),
+      total: q.memberCount.get(g.name).n,
+      present: active ? q.presentCount.get(active.id, g.name).n : null,
+    }));
+  }
+
   admin.get('/overview', (req, res) => {
-    const classes = q.classCounts.all();
+    const groups = groupsSummary();
+    const classes = groups.map((g) => ({ class: g.name, total: g.total })); // régi felület kompatibilitás
     const elections = q.elections.all().map((e) => ({
       id: e.id,
       name: e.name,
@@ -404,38 +465,121 @@ function createApp({ cfg, db, verifyGoogle }) {
       candidates: q.candidates.all(e.id),
       // Élő részvétel: CSAK a létszám, az eredmény lezárásig nem látható.
       noSelfVote: !!e.no_self_vote,
+      requireAttendance: !!e.require_attendance,
+      memberTotal: memberTotal(e),
       published: !!e.published,
       votedCount: q.votedCount.get(e.id).n,
       eligibleCount: e.status === 'closed' ? JSON.parse(e.protocol).eligibleCount : eligibleCount(e),
       resultHash: e.result_hash,
     }));
-    res.json({ me: req.session.email, classes, elections });
+    res.json({ me: req.session.email, classes, groups, elections });
   });
 
+  const rosterLocked = (next) => {
+    if (!q.openElection.get()) return false;
+    next(new HttpError(409, 'Nyitott szavazás alatt a névjegyzék és a csoportok nem módosíthatók.'));
+    return true;
+  };
+  const upsertGroup = db.prepare(
+    'INSERT INTO groups (name, kind) VALUES (?, ?) ON CONFLICT (name) DO UPDATE SET kind = excluded.kind'
+  );
+  const upsertVoter = db.prepare(
+    `INSERT INTO voters (email, class, name) VALUES (?, ?, ?)
+     ON CONFLICT (email) DO UPDATE SET class = excluded.class,
+       name = CASE WHEN excluded.name = '' THEN voters.name ELSE excluded.name END`
+  );
+
+  // Névjegyzék importálása CSV-ből (email;csoport;név). A hiányzó csoportok létrejönnek.
+  // mode = 'replace': a teljes névjegyzék cseréje; 'merge': hozzáadás / módosítás.
   admin.put('/voters', (req, res, next) => {
-    if (q.openElection.get()) return next(new HttpError(409, 'Nyitott szavazás alatt a névjegyzék nem cserélhető.'));
+    if (rosterLocked(next)) return;
+    const replace = req.body.mode !== 'merge';
     const { voters, errors } = parseVoters(req.body.csv, cfg.allowedDomain);
     if (errors.length) return res.status(400).json({ error: 'Hibás sorok a névjegyzékben.', details: errors.slice(0, 50) });
     if (!voters.length) return next(new HttpError(400, 'Üres névjegyzék.'));
     db.transaction(() => {
-      db.prepare('DELETE FROM voters').run();
-      const ins = db.prepare('INSERT INTO voters (email, class) VALUES (?, ?)');
-      voters.forEach((v) => ins.run(v.email, v.class));
+      if (replace) db.prepare('DELETE FROM voters').run();
+      for (const v of voters) {
+        if (!q.group.get(v.class)) upsertGroup.run(v.class, groupKind(v.class));
+        upsertVoter.run(v.email, v.class, v.name);
+      }
     })();
-    audit(req.session.email, 'voters_replaced', { count: voters.length });
+    audit(req.session.email, replace ? 'voters_replaced' : 'voters_merged', { count: voters.length });
     res.json({ ok: true, count: voters.length });
   });
 
-  admin.put('/absent', (req, res) => {
-    const emails = parseEmailList(req.body.emails);
-    let matched = 0;
+  // ----- Csoportok / osztályok és felelőseik (osztályfőnökök) -----
+
+  admin.post('/groups', (req, res, next) => {
+    const name = normalizeClass(req.body.name);
+    if (!name || name.length > 30) return next(new HttpError(400, 'Adj meg egy csoportnevet (max. 30 karakter).'));
+    const kind = ['osztaly', 'csoport'].includes(req.body.kind) ? req.body.kind : groupKind(name);
+    const rawLeaders = Array.isArray(req.body.leaders) ? req.body.leaders.join(',') : String(req.body.leaders || '');
+    const leaders = parseEmailList(rawLeaders);
+    const bad = leaders.filter((e) => e.split('@')[1] !== cfg.allowedDomain);
+    if (bad.length) return next(new HttpError(400, `Csak @${cfg.allowedDomain} cím lehet felelős: ${bad.join(', ')}`));
     db.transaction(() => {
-      db.prepare('UPDATE voters SET absent = 0').run();
-      const upd = db.prepare('UPDATE voters SET absent = 1 WHERE email = ?');
-      emails.forEach((e) => (matched += upd.run(e).changes));
+      upsertGroup.run(name, kind);
+      db.prepare('DELETE FROM group_leaders WHERE group_name = ?').run(name);
+      const ins = db.prepare('INSERT INTO group_leaders (group_name, email) VALUES (?, ?)');
+      leaders.forEach((e) => ins.run(name, e));
     })();
-    audit(req.session.email, 'absent_set', { listed: emails.length, matched });
-    res.json({ ok: true, listed: emails.length, matched, unknown: emails.length - matched });
+    audit(req.session.email, 'group_saved', { name, kind, leaders });
+    res.json({ ok: true, name });
+  });
+
+  admin.delete('/groups/:name', (req, res, next) => {
+    if (rosterLocked(next)) return;
+    const name = req.params.name;
+    if (!q.group.get(name)) return next(new HttpError(404, 'Nincs ilyen csoport.'));
+    if (q.memberCount.get(name).n > 0) return next(new HttpError(409, 'Csak üres csoport törölhető.'));
+    db.prepare('DELETE FROM groups WHERE name = ?').run(name);
+    audit(req.session.email, 'group_deleted', { name });
+    res.json({ ok: true });
+  });
+
+  admin.get('/groups/:name/members', (req, res, next) => {
+    const g = q.group.get(req.params.name);
+    if (!g) return next(new HttpError(404, 'Nincs ilyen csoport.'));
+    res.json({ group: g.name, members: q.members.all(g.name) });
+  });
+
+  // Egy tag felvétele vagy áthelyezése másik csoportba
+  admin.post('/members', (req, res, next) => {
+    if (rosterLocked(next)) return;
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const group = normalizeClass(req.body.group);
+    const name = String(req.body.name || '').trim().replace(/\s+/g, ' ').slice(0, 100);
+    if (!/^[^@\s]+@[^@\s]+$/.test(email) || email.split('@')[1] !== cfg.allowedDomain) {
+      return next(new HttpError(400, `Érvényes @${cfg.allowedDomain} cím kell.`));
+    }
+    if (!q.group.get(group)) return next(new HttpError(404, 'Nincs ilyen csoport. Előbb hozd létre.'));
+    upsertVoter.run(email, group, name);
+    audit(req.session.email, 'member_saved', { email, group });
+    res.json({ ok: true });
+  });
+
+  admin.delete('/members/:email', (req, res, next) => {
+    if (rosterLocked(next)) return;
+    const email = String(req.params.email).toLowerCase();
+    const r = db.prepare('DELETE FROM voters WHERE email = ?').run(email);
+    if (r.changes !== 1) return next(new HttpError(404, 'Nincs ilyen tag.'));
+    audit(req.session.email, 'member_removed', { email });
+    res.json({ ok: true });
+  });
+
+  // Ügyelet: az admin bárki jelenlétét javíthatja az aktív szavazásban.
+  admin.put('/attendance', (req, res, next) => {
+    const e = activeElection();
+    if (!e) return next(new HttpError(409, 'Nincs előkészített vagy nyitott szavazás.'));
+    const email = String(req.body.email || '').toLowerCase();
+    if (!q.voter.get(email)) return next(new HttpError(404, 'Nincs ilyen diák a névjegyzékben.'));
+    if (!req.body.present && q.hasVoted.get(e.id, email)) {
+      return next(new HttpError(409, 'Aki már szavazott, nem jelölhető hiányzónak.'));
+    }
+    q.attendanceSet.run(e.id, email, req.body.present ? 1 : 0, req.session.email);
+    audit(req.session.email, 'attendance_set', { election: e.id, email, present: !!req.body.present });
+    res.json({ ok: true });
   });
 
   admin.post('/elections', (req, res, next) => {
@@ -451,21 +595,25 @@ function createApp({ cfg, db, verifyGoogle }) {
     if (new Set(candidates.map((c) => c.id)).size !== candidates.length) {
       return next(new HttpError(400, 'Ismétlődő jelölt-azonosító.'));
     }
-    const known = new Set(q.classCounts.all().map((r) => r.class));
+    const known = new Set(q.groups.all().map((r) => r.name));
     const unknownClasses = allowed.filter((c) => !known.has(c));
     if (unknownClasses.length) {
-      return next(new HttpError(400, `Ilyen osztály nincs a névjegyzékben: ${unknownClasses.join(', ')}`));
+      return next(new HttpError(400, `Ilyen osztály/csoport nincs: ${unknownClasses.join(', ')}`));
     }
+    // Alapértelmezés: csak az szavazhat, akit az osztályfőnöke jelennek jelölt.
+    const requireAttendance = req.body.requireAttendance === undefined ? 1 : req.body.requireAttendance ? 1 : 0;
     const id = db.transaction(() => {
       const info = db
         .prepare(
-          'INSERT INTO elections (name, is_trial, allowed_classes, no_self_vote, created_at) VALUES (?, ?, ?, ?, ?)'
+          `INSERT INTO elections (name, is_trial, allowed_classes, no_self_vote, require_attendance, created_at)
+           VALUES (?, ?, ?, ?, ?, ?)`
         )
         .run(
           name,
           req.body.isTrial ? 1 : 0,
           allowed.length ? JSON.stringify(allowed) : null,
           req.body.noSelfVote ? 1 : 0,
+          requireAttendance,
           nowIso()
         );
       const eid = info.lastInsertRowid;
@@ -479,6 +627,7 @@ function createApp({ cfg, db, verifyGoogle }) {
     })();
     audit(req.session.email, 'election_created', {
       id, name, candidates, allowedClasses: allowed, noSelfVote: !!req.body.noSelfVote,
+      requireAttendance: !!requireAttendance,
     });
     res.json({ ok: true, id: Number(id) });
   });
@@ -488,8 +637,9 @@ function createApp({ cfg, db, verifyGoogle }) {
     if (!e) return next(new HttpError(404, 'Nincs ilyen szavazás.'));
     if (e.status !== 'draft') return next(new HttpError(409, 'Csak előkészített szavazás nyitható meg.'));
     if (q.openElection.get()) return next(new HttpError(409, 'Már van nyitott szavazás.'));
-    if (eligibleCount(e) === 0) {
-      return next(new HttpError(409, 'Nincs egyetlen jogosult szavazó sem (üres névjegyzék vagy mindenki hiányzik).'));
+    // Jelenlét-ellenőrzésnél a jelenlétet megnyitás után is lehet rögzíteni, ezért itt a létszám számít.
+    if (memberTotal(e) === 0) {
+      return next(new HttpError(409, 'A kijelölt csoportokban nincs egyetlen tag sem (üres névjegyzék).'));
     }
     db.prepare("UPDATE elections SET status = 'open', opened_at = ? WHERE id = ?").run(nowIso(), e.id);
     audit(req.session.email, 'election_opened', { id: e.id });
@@ -512,8 +662,10 @@ function createApp({ cfg, db, verifyGoogle }) {
         isTrial: !!e.is_trial,
         allowedClasses: allowedClasses(e),
         noSelfVote: !!e.no_self_vote,
+        requireAttendance: !!e.require_attendance,
         openedAt: e.opened_at,
         closedAt,
+        memberTotal: memberTotal(e),
         eligibleCount: eligibleCount(e),
         votedCount: q.votedCount.get(e.id).n,
         ballotCount: q.ballotCount.get(e.id).n,
@@ -566,6 +718,7 @@ function createApp({ cfg, db, verifyGoogle }) {
     if (e.status !== 'draft') return next(new HttpError(409, 'Csak még meg nem nyitott szavazás törölhető.'));
     db.transaction(() => {
       db.prepare('DELETE FROM tally WHERE election_id = ?').run(e.id);
+      db.prepare('DELETE FROM attendance WHERE election_id = ?').run(e.id);
       db.prepare('DELETE FROM candidates WHERE election_id = ?').run(e.id);
       db.prepare('DELETE FROM elections WHERE id = ?').run(e.id);
     })();
@@ -573,32 +726,34 @@ function createApp({ cfg, db, verifyGoogle }) {
     res.json({ ok: true });
   });
 
-  // Ügyelet a szavazás napján: diák keresése, hiányzás javítása.
+  // Ügyelet a szavazás napján: diák keresése (név vagy email), jelenlét javítása.
   // Az admin látja, hogy valaki szavazott-e (mint papíron az aláírt névsor) – de azt nem, hogy mire.
   admin.get('/voters/search', (req, res) => {
     const term = String(req.query.q || '').trim().toLowerCase();
     if (term.length < 2) return res.json({ voters: [] });
     const open = q.openElection.get();
+    const active = activeElection();
+    const like = '%' + term.replace(/[\\%_]/g, (m) => '\\' + m) + '%';
     const rows = db
-      .prepare("SELECT email, class, absent FROM voters WHERE email LIKE ? ESCAPE '\\' ORDER BY email LIMIT 20")
-      .all('%' + term.replace(/[\\%_]/g, (m) => '\\' + m) + '%');
+      .prepare(
+        `SELECT email, class, name FROM voters
+         WHERE email LIKE ? ESCAPE '\\' OR lower(name) LIKE ? ESCAPE '\\' ORDER BY name, email LIMIT 20`
+      )
+      .all(like, like);
     res.json({
       openElection: !!open,
-      voters: rows.map((v) => ({
-        email: v.email,
-        class: v.class,
-        absent: !!v.absent,
-        voted: open ? !!q.hasVoted.get(open.id, v.email) : null,
-      })),
+      activeElection: active ? { id: active.id, name: active.name, requireAttendance: !!active.require_attendance } : null,
+      voters: rows.map((v) => {
+        const a = active ? q.attendanceGet.get(active.id, v.email) : null;
+        return {
+          email: v.email,
+          class: v.class,
+          name: v.name,
+          present: a ? !!a.present : null,
+          voted: open ? !!q.hasVoted.get(open.id, v.email) : null,
+        };
+      }),
     });
-  });
-
-  admin.put('/voters/absent', (req, res, next) => {
-    const email = String(req.body.email || '').toLowerCase();
-    const r = db.prepare('UPDATE voters SET absent = ? WHERE email = ?').run(req.body.absent ? 1 : 0, email);
-    if (r.changes !== 1) return next(new HttpError(404, 'Nincs ilyen diák a névjegyzékben.'));
-    audit(req.session.email, 'absent_toggled', { email, absent: !!req.body.absent });
-    res.json({ ok: true });
   });
 
   // Adatvédelem: a szavazás után a személyes adatok (névjegyzék, ki szavazott, munkamenetek) törlése.
@@ -609,6 +764,7 @@ function createApp({ cfg, db, verifyGoogle }) {
     const counts = db.transaction(() => ({
       voters: db.prepare('DELETE FROM voters').run().changes,
       voted: db.prepare('DELETE FROM voted').run().changes,
+      attendance: db.prepare('DELETE FROM attendance').run().changes,
       sessions: db.prepare('DELETE FROM sessions WHERE token != ?').run(req.session.tokenHash).changes,
     }))();
     audit(req.session.email, 'personal_data_purged', counts);
@@ -618,6 +774,70 @@ function createApp({ cfg, db, verifyGoogle }) {
   admin.get('/audit', (req, res) => res.json({ log: q.auditList.all() }));
 
   app.use('/api/admin', admin);
+
+  // ---------- osztályfőnök / csoportfelelős ----------
+  // Csak a saját csoportjait látja és kezeli: a névsort, a jelenlétet, és hogy ki szavazott már.
+  // Azt, hogy KIRE szavaztak, itt sem látja senki.
+
+  const teacher = express.Router();
+  teacher.use(requireLeader);
+
+  teacher.get('/overview', (req, res) => {
+    const e = activeElection();
+    const showVoted = e && e.status === 'open';
+    const groups = req.leaderOf.map((name) => {
+      const g = q.group.get(name);
+      const members = q.members.all(name).map((m) => {
+        const a = e ? q.attendanceGet.get(e.id, m.email) : null;
+        return {
+          email: m.email,
+          name: m.name,
+          present: a ? !!a.present : null,
+          voted: showVoted ? !!q.hasVoted.get(e.id, m.email) : null,
+        };
+      });
+      return {
+        name,
+        kind: g ? g.kind : 'csoport',
+        votes: e ? groupAllowed(e, name) : null, // részt vesz-e a csoport ebben a szavazásban
+        members,
+      };
+    });
+    res.json({
+      me: req.session.email,
+      isAdmin: isAdmin(req.session.email),
+      election: e
+        ? { id: e.id, name: e.name, status: e.status, isTrial: !!e.is_trial, requireAttendance: !!e.require_attendance }
+        : null,
+      groups,
+    });
+  });
+
+  // Jelenlét rögzítése: { group, present: [email...], absent: [email...] }
+  teacher.put('/attendance', (req, res, next) => {
+    const e = activeElection();
+    if (!e) return next(new HttpError(409, 'Nincs előkészített vagy nyitott szavazás.'));
+    const group = String(req.body.group || '');
+    if (!req.leaderOf.includes(group)) return next(new HttpError(403, 'Ennek a csoportnak nem vagy a felelőse.'));
+    const list = (x) => (Array.isArray(x) ? x.map((s) => String(s).toLowerCase()) : []);
+    const present = list(req.body.present);
+    const absent = list(req.body.absent);
+    const members = new Set(q.members.all(group).map((m) => m.email));
+    const foreign = [...present, ...absent].filter((em) => !members.has(em));
+    if (foreign.length) return next(new HttpError(403, `Nem a csoportod tagja: ${foreign.join(', ')}`));
+    const votedAbsent = absent.filter((em) => q.hasVoted.get(e.id, em));
+    if (votedAbsent.length) {
+      return next(new HttpError(409, `Aki már szavazott, nem jelölhető hiányzónak: ${votedAbsent.join(', ')}`));
+    }
+    db.transaction(() => {
+      present.forEach((em) => q.attendanceSet.run(e.id, em, 1, req.session.email));
+      absent.forEach((em) => q.attendanceSet.run(e.id, em, 0, req.session.email));
+    })();
+    audit(req.session.email, 'attendance_marked', { election: e.id, group, present: present.length, absent: absent.length });
+    res.json({ ok: true });
+  });
+
+  app.use('/api/teacher', teacher);
 
   // Állapotjelzés (monitorozáshoz, pl. uptime-figyelő)
   app.get('/healthz', (req, res) => {

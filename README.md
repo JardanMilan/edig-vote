@@ -10,7 +10,7 @@ Elektronikus szavazórendszer a Dobó István Gimnázium (Eger) diáknapjára. K
 
 📄 **[Részletes rendszerleírás](docs/RENDSZERLEIRAS.md)** · 🗓️ **[Ütemterv 2026/27](docs/UTEMTERV.md)** · 🧑‍🏫 **[Infótanároknak](docs/INFOTANAROKNAK.md)** · 🔐 **[Biztonsági terv](docs/BIZTONSAGI-TERV.md)** · 🛡️ **[Kiberbiztonság](docs/KIBERBIZTONSAG.md)** · 🔧 **[Rendszergazdai teendők](docs/RENDSZERGAZDA.md)** · 🚀 **[Telepítés](docs/TELEPITES.md)** · 📝 **[Változások](CHANGELOG.md)**
 
-> **Állapot:** prototípus (v0.2.1). Cél: a 2027-es diáknap, előtte két próbaszavazás mérésekkel.
+> **Állapot:** prototípus (v0.3). Cél: a 2027-es diáknap, előtte két próbaszavazás mérésekkel.
 
 ## Kipróbálás (Google-fiók nélkül)
 
@@ -21,13 +21,23 @@ npm install
 npm run demo
 ```
 
-Ez egy demó adatbázist készít (45 teszt diák 9 osztályban, 5 tanár, egy előkészített szavazás), és fejlesztői módban elindítja a szervert a http://localhost:3000 címen.
+Ez egy demó adatbázist készít (9 osztály névvel és osztályfőnökkel, tanári csoport, egy előkészített szavazás jelenlét-ellenőrzéssel), és fejlesztői módban elindítja a szervert a http://localhost:3000 címen.
 
-1. **Admin:** http://localhost:3000/admin → belépés `admin@edig.hu` → a próbakör **Megnyitás**
-2. **Kivetítő:** http://localhost:3000/kiosk#demo → itt látszik a jelenléti kód és a QR
-3. **Diák:** http://localhost:3000 (másik böngészőben vagy privát ablakban) → belépés pl. `diak1@edig.hu` → kód → szavazás
-   - a DÖK szabálya szerint a versengő 11. évfolyam nem szavaz: `diak1–15` (11.A–C) nem tud szavazni, `diak16–45` és `tanar1–5@edig.hu` igen
-4. **Admin:** **Lezárás** → jegyzőkönyv (nyomtatás, JSON letöltés), igény szerint **Eredmény a kivetítőre**
+1. **Admin:** http://localhost:3000/admin → belépés `admin@edig.hu` → a szavazás **Megnyitás**. Itt kezelhetők az osztályok, csoportok, osztályfőnökök és tagok is.
+2. **Osztályfőnök** (telefonon is): http://localhost:3000/tanar → belépés pl. `ofo.9a@edig.hu` → a saját osztály névsora, koppintással jelölhető a jelenlét. A tanári csoport felelőse `igazgatohelyettes@edig.hu`.
+3. **Kivetítő:** http://localhost:3000/kiosk#demo (osztályfőnökként belépve kulcs nélkül is)
+4. **Diák:** http://localhost:3000 (másik böngészőben vagy privát ablakban) → belépés pl. `diak16@edig.hu` (9.A) → kód → szavazás
+   - csak az szavazhat, akit az osztályfőnöke jelennek jelölt
+   - a DÖK szabálya szerint a versengő 11. évfolyam nem szavaz: `diak1–15` (11.A–C) nem tud szavazni
+5. **Admin:** **Lezárás** → jegyzőkönyv (nyomtatás, JSON letöltés), igény szerint **Eredmény a kivetítőre**
+
+### Szerepkörök
+
+| Szerepkör | Ki | Mit lát / mit tud |
+|---|---|---|
+| **Admin** | az `ADMIN_EMAILS` címei (pl. rendszergazda, igazgató) | mindent: osztályok, csoportok, osztályfőnökök, tagok, szavazások, lezárás, jegyzőkönyv |
+| **Osztályfőnök / csoportfelelős** | akit az admin egy osztályhoz vagy csoporthoz rendel | csak a saját osztályát: névsor, reggeli jelenlét, ki szavazott már (azt nem, hogy kire) |
+| **Szavazó** | a névjegyzék tagjai (diákok, tanárok) | a saját szavazólapját |
 
 A jegyzőkönyv-fájl ellenőrzése: `npm run verify -- jegyzokonyv-1.json <lenyomat>`
 

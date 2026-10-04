@@ -8,6 +8,13 @@
   <style>
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+    .check { display: flex; gap: 10px; align-items: flex-start; font-weight: 500; margin: 8px 0 0; cursor: pointer; }
+    .check input { width: 18px; height: 18px; margin-top: 3px; flex: none; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 12px; }
+    .grid3 label { margin-top: 0; }
+    @media (max-width: 760px) { .grid3 { grid-template-columns: 1fr; } }
+    td .row { gap: 6px; justify-content: flex-end; }
+    td button { min-height: 36px; padding: 6px 12px; font-size: 0.88rem; }
     .el-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
     .classpick { display: flex; flex-wrap: wrap; gap: 6px; }
     .classpick label { display: inline-flex; gap: 6px; align-items: center; font-weight: 500; margin: 0; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
@@ -74,11 +81,12 @@
         <form id="newForm">
           <label for="elName">Megnevezés</label>
           <input id="elName" placeholder="Diáknap 2026 – próbakör" required>
-          <label class="row" style="font-weight:500"><input type="checkbox" id="elTrial" style="width:auto" checked> Próbakör</label>
-          <label class="row" style="font-weight:500;margin-top:4px"><input type="checkbox" id="elNoSelf" style="width:auto"> A diák nem szavazhat a saját osztályára</label>
+          <label class="check"><input type="checkbox" id="elTrial" checked> <span>Próbakör</span></label>
+          <label class="check"><input type="checkbox" id="elAttendance" checked> <span>Csak az szavazhat, akit az osztályfőnöke jelennek jelölt</span></label>
+          <label class="check"><input type="checkbox" id="elNoSelf"> <span>A diák nem szavazhat a saját osztályára</span></label>
           <label for="elCands">Jelöltek (soronként: azonosító;megjelenő név)</label>
           <textarea id="elCands" placeholder="11.A;11.A – Vadnyugat&#10;11.B;11.B – Űrutazás&#10;11.C;11.C – Retro 80s"></textarea>
-          <label>Szavazó osztályok <span class="muted">(ha egyet sem jelölsz: mindenki)</span></label>
+          <label>Szavazó osztályok és csoportok <span class="muted">(ha egyet sem jelölsz: mindenki)</span></label>
           <div class="classpick" id="classPick"></div>
           <div style="height:16px"></div>
           <button type="submit">Létrehozás</button>
@@ -86,27 +94,71 @@
       </section>
 
       <section class="card">
-        <h2>Névjegyzék</h2>
-        <table id="classTable"></table>
-        <label for="votersCsv">Csere CSV-ből (email;osztály)</label>
+        <h2>Névjegyzék importálása</h2>
+        <p class="muted">CSV soronként: <code>email;csoport;név</code>, pl. <code>kiss.anna@edig.hu;9.A;Kiss Anna</code> vagy <code>toth.timea@edig.hu;TANÁR;Tóth Tímea</code>. A hiányzó osztályok és csoportok automatikusan létrejönnek.</p>
         <input type="file" id="votersFile" accept=".csv,.txt">
         <div style="height:8px"></div>
-        <textarea id="votersCsv" placeholder="email;osztaly&#10;kiss.anna@edig.hu;9.A"></textarea>
+        <textarea id="votersCsv" placeholder="email;csoport;nev&#10;kiss.anna@edig.hu;9.A;Kiss Anna"></textarea>
+        <label class="check"><input type="checkbox" id="votersReplace"> <span>Teljes csere (a listában nem szereplők törlődnek)</span></label>
         <div style="height:8px"></div>
-        <button id="votersBtn">Névjegyzék cseréje</button>
-        <p class="muted" style="margin-top:8px">Nyitott szavazás alatt nem cserélhető.</p>
-
-        <label for="absentList" style="margin-top:20px">Mai hiányzók (emailcímek)</label>
-        <textarea id="absentList" placeholder="Egy sorba egy cím, vagy vesszővel elválasztva. Üres lista = senki nem hiányzik."></textarea>
-        <div style="height:8px"></div>
-        <button id="absentBtn">Hiányzók mentése</button>
+        <button id="votersBtn">Importálás</button>
+        <p class="muted" style="margin-top:8px">Nyitott szavazás alatt a névjegyzék nem módosítható.</p>
       </section>
     </div>
 
     <section class="card">
+      <h2>Osztályok és csoportok</h2>
+      <p class="muted">Itt állíthatod be, melyik osztálynak ki az osztályfőnöke (a tanári csoportnál pl. az igazgatóhelyettes). Ők a <a href="/tanar">tanári felületen</a> csak a saját csoportjukat látják, és reggel ott jelölik a jelenlétet.</p>
+      <table id="groupTable"></table>
+      <form id="groupForm" style="margin-top:16px">
+        <div class="grid3">
+          <div>
+            <label for="gName">Név</label>
+            <input id="gName" placeholder="9.A vagy TANÁR" required>
+          </div>
+          <div>
+            <label for="gKind">Típus</label>
+            <select id="gKind"><option value="">automatikus</option><option value="osztaly">osztály</option><option value="csoport">csoport</option></select>
+          </div>
+          <div>
+            <label for="gLeaders">Osztályfőnök / felelős emailcíme(i)</label>
+            <input id="gLeaders" placeholder="ofo@edig.hu (több: vesszővel)">
+          </div>
+        </div>
+        <div style="height:12px"></div>
+        <button type="submit" id="groupSave">Csoport mentése</button>
+        <button type="button" class="secondary hidden" id="groupCancel">Mégsem</button>
+      </form>
+    </section>
+
+    <section class="card hidden" id="memberView">
+      <div class="el-head">
+        <h2 id="memberTitle" style="margin:0"></h2>
+        <button class="secondary" id="memberClose">Bezárás</button>
+      </div>
+      <table id="memberTable" style="margin-top:12px"></table>
+      <form id="memberForm" style="margin-top:16px">
+        <div class="grid3">
+          <div>
+            <label for="mName">Név</label>
+            <input id="mName" placeholder="Kiss Anna">
+          </div>
+          <div>
+            <label for="mEmail">Emailcím</label>
+            <input id="mEmail" type="email" placeholder="kiss.anna@edig.hu" required>
+          </div>
+          <div style="display:flex;align-items:end">
+            <button type="submit" style="width:100%">Felvétel ide</button>
+          </div>
+        </div>
+        <p class="muted" style="margin-top:8px">Ha a cím már másik csoportban van, ide kerül át.</p>
+      </form>
+    </section>
+
+    <section class="card">
       <h2>Ügyelet – diák keresése</h2>
-      <p class="muted">Ha egy diák nem tud szavazni: nézd meg, szerepel-e a névjegyzékben, hiányzónak van-e jelölve, és szavazott-e már. (Azt, hogy kire szavazott, a rendszer nem tudja.)</p>
-      <input id="searchInput" placeholder="Emailcím részlete, pl. kiss.anna">
+      <p class="muted">Ha egy diák nem tud szavazni: nézd meg, szerepel-e a névjegyzékben, jelennek van-e jelölve, és szavazott-e már. (Azt, hogy kire szavazott, a rendszer nem tudja.)</p>
+      <input id="searchInput" placeholder="Név vagy emailcím részlete, pl. Kiss vagy kiss.anna">
       <table id="searchTable" style="margin-top:8px"></table>
     </section>
 

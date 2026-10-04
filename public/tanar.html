@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Osztályom – jelenlét</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .group-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+    .stats { display: flex; gap: 16px; flex-wrap: wrap; margin: 8px 0 12px; }
+    .stat { font-variant-numeric: tabular-nums; }
+    .stat b { font-size: 1.3rem; }
+    .people { list-style: none; padding: 0; margin: 0; }
+    .person {
+      display: flex; align-items: center; gap: 14px; padding: 12px 6px; border-bottom: 1px solid var(--line);
+      cursor: pointer; min-height: 56px;
+    }
+    .person input { width: 26px; height: 26px; accent-color: var(--ok); flex: none; cursor: pointer; }
+    .person .who { flex: 1; min-width: 0; }
+    .person .nm { font-weight: 600; }
+    .person .em { font-size: 0.82rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .person.absent .nm { color: var(--muted); text-decoration: line-through; }
+    .person.unset .nm { color: var(--muted); }
+    .person[aria-disabled="true"] { cursor: default; }
+    .sticky { position: sticky; top: 0; background: var(--bg); padding: 8px 0; z-index: 1; }
+  </style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <div>
+      <h1>Osztályom</h1>
+      <p class="muted" id="who"></p>
+    </div>
+    <div class="row">
+      <a class="btn secondary hidden" id="adminLink" href="/admin" style="background:transparent;color:var(--accent);border:1px solid var(--line)">Admin</a>
+      <button class="secondary hidden" id="logoutBtn">Kilépés</button>
+    </div>
+  </header>
+
+  <div id="msg"></div>
+
+  <section class="card hidden" id="loginView">
+    <h2>Belépés</h2>
+    <p>Lépj be az iskolai Google-fiókoddal.</p>
+    <div id="googleBtn"></div>
+    <form id="devForm" class="hidden">
+      <div class="notice warn"><b>Fejlesztői mód</b></div>
+      <label for="devEmail">Tanári emailcím</label>
+      <input id="devEmail" type="email" value="ofo.9a@edig.hu" required>
+      <div style="height:12px"></div>
+      <button type="submit">Belépés</button>
+    </form>
+  </section>
+
+  <div id="mainView" class="hidden">
+    <section class="card" id="electionCard"></section>
+    <div id="groups"></div>
+  </div>
+</main>
+<script src="/common.js"></script>
+<script src="/tanar.js"></script>
+</body>
+</html>

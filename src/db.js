@@ -78,7 +78,40 @@ CREATE TABLE IF NOT EXISTS audit_log (
 
 // Új oszlopok felvétele régebbi adatbázisokba is (v0.1 -> v0.2).
 function migrate(db) {
+  // v0.3: csoportok/osztályok, felelősök (osztályfőnökök), nevek, szavazásonkénti jelenlét
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS groups (
+      name TEXT PRIMARY KEY,
+      kind TEXT NOT NULL DEFAULT 'osztaly' CHECK (kind IN ('osztaly','csoport'))
+    ) WITHOUT ROWID;
+    -- Ki kezelheti a csoport jelenlétét (osztályfőnök, vagy a tanári csoportnál pl. igazgatóhelyettes).
+    CREATE TABLE IF NOT EXISTS group_leaders (
+      group_name TEXT NOT NULL REFERENCES groups(name) ON DELETE CASCADE ON UPDATE CASCADE,
+      email      TEXT NOT NULL,
+      PRIMARY KEY (group_name, email)
+    ) WITHOUT ROWID;
+    -- Jelenlét szavazásonként: 1 = jelen, 0 = hiányzik, nincs sor = még nincs rögzítve.
+    -- Csak azt tartalmazza, ki volt jelen – szavazatról semmit.
+    CREATE TABLE IF NOT EXISTS attendance (
+      election_id INTEGER NOT NULL REFERENCES elections(id),
+      email       TEXT NOT NULL,
+      present     INTEGER NOT NULL CHECK (present IN (0,1)),
+      marked_by   TEXT NOT NULL,
+      PRIMARY KEY (election_id, email)
+    ) WITHOUT ROWID;
+  `);
+  const vcols = db.prepare('PRAGMA table_info(voters)').all().map((c) => c.name);
+  if (!vcols.includes('name')) db.exec("ALTER TABLE voters ADD COLUMN name TEXT NOT NULL DEFAULT ''");
+  // Régi adatbázis: a meglévő osztályokból csoport lesz.
+  const { groupKind } = require('./csv');
+  const insGroup = db.prepare('INSERT OR IGNORE INTO groups (name, kind) VALUES (?, ?)');
+  for (const r of db.prepare('SELECT DISTINCT class FROM voters').all()) insGroup.run(r.class, groupKind(r.class));
+
   const cols = db.prepare('PRAGMA table_info(elections)').all().map((c) => c.name);
+  if (!cols.includes('require_attendance')) {
+    // 1 = csak az szavazhat, akit a csoport felelőse (osztályfőnök) jelennek jelölt
+    db.exec('ALTER TABLE elections ADD COLUMN require_attendance INTEGER NOT NULL DEFAULT 0');
+  }
   if (!cols.includes('no_self_vote')) {
     // 1 = a diák nem szavazhat a saját osztályára (ha az osztálya jelölt)
     db.exec('ALTER TABLE elections ADD COLUMN no_self_vote INTEGER NOT NULL DEFAULT 0');
