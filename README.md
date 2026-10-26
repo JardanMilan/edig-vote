@@ -62,6 +62,9 @@ Többek között: teljes szavazási folyamat, dupla szavazás (50 egyidejű kér
 
 ## Felépítés
 
+[![Architecture diagram of jardanmilan/edig-vote](https://gitdiagram.com/jardanmilan/edig-vote/diagram.png)](https://gitdiagram.com/jardanmilan/edig-vote?utm_source=readme&utm_medium=picture)
+[![Architecture diagram](https://gitdiagram.com/diagram-badge.svg)](https://gitdiagram.com/jardanmilan/edig-vote?utm_source=readme&utm_medium=badge)
+
 ```
 szavazas/          a szerver (Python)
   __main__.py      indítás (python -m szavazas)
